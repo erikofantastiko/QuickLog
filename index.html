@@ -101,8 +101,8 @@
 <div class="tl" id="tl-root">
 
 <div class="mr">
-  <button class="mb on" id="tab-size" onclick="ST('size')">Position Sizer</button>
-  <button class="mb" id="tab-log" onclick="ST('log')">Trade Log</button>
+  <button class="mb on" id="tab-size">Position Sizer</button>
+  <button class="mb" id="tab-log">Trade Log</button>
 </div>
 
 <!-- ===================== SIZER ===================== -->
@@ -111,7 +111,7 @@
   <div class="r2">
     <div class="fi">
       <label>Broker</label>
-      <select id="brk" onchange="BRK()">
+      <select id="brk">
         <option value="ftmo">FTMO (MT5 CFD)</option>
         <option value="breakout">Breakout (Crypto Perps)</option>
         <option value="custom">Custom</option>
@@ -119,7 +119,7 @@
     </div>
     <div class="fi">
       <label>Account Size</label>
-      <select id="accPreset" onchange="ACC()">
+      <select id="accPreset">
         <option value="10000">10,000</option>
         <option value="25000">25,000</option>
         <option value="50000">50,000</option>
@@ -132,17 +132,17 @@
 
   <div class="fi" id="accCustomWrap" style="display:none">
     <label>Custom Account Size</label>
-    <input type="text" id="accCustom" placeholder="100000" oninput="U()">
+    <input type="text" id="accCustom" placeholder="100000">
   </div>
 
   <div class="r2">
     <div class="fi">
       <label>Instrument</label>
-      <select id="inst" onchange="INST()"></select>
+      <select id="inst"></select>
     </div>
     <div class="fi">
       <label>Risk %</label>
-      <select id="szRisk" onchange="U()">
+      <select id="szRisk">
         <option value="0.10">0.10%</option>
         <option value="0.25" selected>0.25%</option>
         <option value="0.50">0.50%</option>
@@ -153,7 +153,7 @@
 
   <div class="fi" id="cvWrap">
     <label>Contract Value <span id="cvHint" style="text-transform:none;letter-spacing:0;color:var(--tx3)">(per 1.0 price move, per lot)</span></label>
-    <input type="text" id="cv" placeholder="1.0" oninput="U()">
+    <input type="text" id="cv" placeholder="1.0">
   </div>
 
   <div class="sp"></div>
@@ -161,24 +161,24 @@
   <div class="r2">
     <div class="fi">
       <label>Entry</label>
-      <input type="text" id="szEntry" placeholder="1.08500" oninput="U()" style="font-family:var(--mn);font-size:18px">
+      <input type="text" id="szEntry" placeholder="1.08500" style="font-family:var(--mn);font-size:18px">
     </div>
     <div class="fi">
       <label>Stop Loss</label>
-      <input type="text" id="szSL" placeholder="1.08200" oninput="U()" style="font-family:var(--mn);font-size:18px">
+      <input type="text" id="szSL" placeholder="1.08200" style="font-family:var(--mn);font-size:18px">
     </div>
   </div>
 
   <div class="fi">
     <label>Take Profit <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(optional, for R:R)</span></label>
-    <input type="text" id="szTP" placeholder="1.09500" oninput="U()" style="font-family:var(--mn)">
+    <input type="text" id="szTP" placeholder="1.09500" style="font-family:var(--mn)">
   </div>
 
   <div class="sl">Result</div>
   <div class="sz-out" id="szOut"></div>
 
   <div class="ar" style="margin-bottom:16px">
-    <button class="bt" id="chartToggle" onclick="toggleChart()">Show Chart ▾</button>
+    <button class="bt" id="chartToggle">Show Chart ▾</button>
   </div>
 
   <div id="chartWrap" style="display:none;margin-bottom:24px">
@@ -186,7 +186,7 @@
       <label>Chart Feed <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(broker / futures — search inside chart too)</span></label>
       <div style="display:flex;gap:8px">
         <input type="text" id="feedInput" placeholder="e.g. OANDA:NAS100USD, CME_MINI:NQ1!, KRAKEN:BTCUSD" style="font-family:var(--mn);font-size:14px">
-        <button class="bt" style="flex:0 0 auto;padding:12px 16px" onclick="applyFeed()">Load</button>
+        <button class="bt" id="feedLoad" style="flex:0 0 auto;padding:12px 16px">Load</button>
       </div>
     </div>
     <div id="tvChart" style="height:360px;border-radius:12px;overflow:hidden;border:1px solid var(--bd)"></div>
@@ -194,7 +194,7 @@
   </div>
 
   <div class="ar">
-    <button class="bt bp" onclick="TOLOG()">Send to Trade Log →</button>
+    <button class="bt bp" id="toLogBtn">Send to Trade Log →</button>
   </div>
 </div>
 
@@ -202,44 +202,44 @@
 <div id="log-view" style="display:none">
 
   <div class="mr" style="margin-bottom:20px">
-    <button class="mb on" id="bl" onclick="SM('live')">Live</button>
-    <button class="mb" id="bb" onclick="SM('backtest')">Backtest</button>
+    <button class="mb on" id="bl">Live</button>
+    <button class="mb" id="bb">Backtest</button>
   </div>
 
   <div id="btf" style="display:none">
     <div class="r2" style="margin-bottom:20px">
       <div class="fi" style="margin-bottom:0">
         <label>BT-Session-ID</label>
-        <input type="text" id="btId" placeholder="BT-2026-01-NDX" oninput="U()">
+        <input type="text" id="btId" placeholder="BT-2026-01-NDX">
       </div>
       <div class="fi" style="margin-bottom:0">
         <label>Pool</label>
-        <input type="text" id="pl" placeholder="Jan 2023 – May 2026" oninput="U()">
+        <input type="text" id="pl" placeholder="Jan 2023 – May 2026">
       </div>
     </div>
   </div>
 
   <div class="fi">
     <label>Asset</label>
-    <input type="text" id="ast" placeholder="EUR/USD" oninput="this.value=this.value.toUpperCase();U()" style="font-size:20px;font-weight:600;padding:14px">
+    <input type="text" id="ast" placeholder="EUR/USD" style="font-size:20px;font-weight:600;padding:14px">
   </div>
 
   <div class="fi">
     <label>Direction</label>
     <div class="dr">
-      <button class="db lo" id="blo" onclick="SD('Long')">↑ Long</button>
-      <button class="db" id="bsh" onclick="SD('Short')">↓ Short</button>
+      <button class="db lo" id="blo">↑ Long</button>
+      <button class="db" id="bsh">↓ Short</button>
     </div>
   </div>
 
   <div class="r2">
     <div class="fi">
       <label>Session</label>
-      <select id="ses" onchange="U()"><option>London</option><option>NY</option><option>Asia</option></select>
+      <select id="ses"><option>London</option><option>NY</option><option>Asia</option></select>
     </div>
     <div class="fi">
       <label>Risk %</label>
-      <select id="rsk" onchange="U()">
+      <select id="rsk">
         <option value="0.10">0.10%</option><option value="0.25" selected>0.25%</option>
         <option value="0.50">0.50%</option><option value="1.00">1.00%</option>
       </select>
@@ -250,30 +250,30 @@
 
   <div class="fi">
     <label>Entry</label>
-    <input type="text" id="ent" placeholder="1.08500" oninput="U()" style="font-family:var(--mn);font-size:18px">
+    <input type="text" id="ent" placeholder="1.08500" style="font-family:var(--mn);font-size:18px">
   </div>
 
   <div class="r2">
     <div class="fi">
       <label>Stop Loss</label>
-      <input type="text" id="slo" placeholder="1.08200" oninput="U()" style="font-family:var(--mn)">
+      <input type="text" id="slo" placeholder="1.08200" style="font-family:var(--mn)">
     </div>
     <div class="fi">
       <label>Take Profit</label>
-      <input type="text" id="tpr" placeholder="1.09500" oninput="U()" style="font-family:var(--mn)">
+      <input type="text" id="tpr" placeholder="1.09500" style="font-family:var(--mn)">
     </div>
   </div>
 
   <div class="fi">
     <label>Volume <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(lots / units)</span></label>
-    <input type="text" id="vol" placeholder="0.00" oninput="U()" style="font-family:var(--mn)">
+    <input type="text" id="vol" placeholder="0.00" style="font-family:var(--mn)">
   </div>
 
   <div class="sp"></div>
 
   <div class="fi">
     <label>Setup</label>
-    <select id="stp" onchange="U()">
+    <select id="stp">
       <option>Asia Range</option><option>Monday Model</option>
       <option>EBP H4</option><option>EBP H1</option>
       <option>H12 SFP</option><option>FVG Retracement</option>
@@ -285,12 +285,12 @@
 
   <div class="fi">
     <label>Note</label>
-    <input type="text" id="nte" placeholder="H1 FVG after sweep, DXY divergence..." oninput="U()">
+    <input type="text" id="nte" placeholder="H1 FVG after sweep, DXY divergence...">
   </div>
 
   <div class="ar">
-    <button class="bt bp" onclick="CJ()" id="cpb">Copy for Sheet</button>
-    <button class="bt" onclick="EX()" id="exb">PNG for X</button>
+    <button class="bt bp" id="cpb">Copy for Sheet</button>
+    <button class="bt" id="exb">PNG for X</button>
   </div>
 
   <div class="sp"></div>
@@ -302,12 +302,27 @@
 </div>
 
 <script>
-/* ---------- instrument presets per broker ---------- */
-var PRESETS={
+(function(){
+'use strict';
+
+/* ============================================================
+   QuickLog — Position Sizer + Trade Log
+   Single-file app. Sections: Constants · State · Utils ·
+   Sizer · Log card · Log actions · Chart · Persistence · Wiring
+   ============================================================ */
+
+var $ = function(id){ return document.getElementById(id); };
+
+/* ---------- Constants ---------- */
+
+// Instrument presets per broker.
+// cv = account-currency (USD) value per 1.0 price move, per lot.
+// quote:'JPY' marks pairs whose cv must be derived from entry (cv = 100000 / price).
+var PRESETS = {
   ftmo:[
     {s:'EUR/USD',cv:100000,unit:'lots',hint:'1 lot = 100,000 units',tv:'OANDA:EURUSD'},
     {s:'GBP/USD',cv:100000,unit:'lots',hint:'1 lot = 100,000 units',tv:'OANDA:GBPUSD'},
-    {s:'USD/JPY',cv:100000,unit:'lots',hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:USDJPY'},
+    {s:'USD/JPY',cv:100000,unit:'lots',quote:'JPY',hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:USDJPY'},
     {s:'EUR/GBP',cv:100000,unit:'lots',hint:'1 lot = 100,000 units',tv:'OANDA:EURGBP'},
     {s:'AUD/USD',cv:100000,unit:'lots',hint:'1 lot = 100,000 units',tv:'OANDA:AUDUSD'},
     {s:'USD/CAD',cv:100000,unit:'lots',hint:'1 lot = 100,000 units',tv:'OANDA:USDCAD'},
@@ -333,71 +348,41 @@ var PRESETS={
   custom:[{s:'Custom',cv:'',unit:'units',hint:'enter contract value manually',tv:''}]
 };
 
-var D='Long',M='live',TAB='size';
+// FX standard lot notional — basis for JPY-quoted cv derivation.
+var FX_LOT = 100000;
 
-function T(m){var t=document.getElementById('tst');t.textContent=m;t.classList.add('vis');setTimeout(function(){t.classList.remove('vis')},2200)}
+// Column order for the Google Sheet export. Must stay byte-identical to
+// the downstream sheet layout — '' marks a column the sheet fills itself.
+var SHEET_COLUMNS = {
+  // live: [_, datetime, asset, _, entry, _, sl, tp, vol, risk, _, _, _, rr, _, _, dir, session, _, setup+note, _, _, _]
+  live:      ['', 'dt', 'asset', '', 'entry', '', 'sl', 'tp', 'vol', 'risk', '', '', '', 'rr', '', '', 'dir', 'session', '', 'note', '', '', ''],
+  // backtest: [btId, pool, date, _, _, _, datetime, asset, _, entry, _, sl, tp, vol, risk, _, _, _, rr, _, _, dir, session, _, setup+note, _, _, _]
+  backtest:  ['btId', 'pool', 'date', '', '', '', 'dt', 'asset', '', 'entry', '', 'sl', 'tp', 'vol', 'risk', '', '', '', 'rr', '', '', 'dir', 'session', '', 'note', '', '', '']
+};
 
-function ST(t){
-  TAB=t;
-  document.getElementById('tab-size').className='mb'+(t==='size'?' on':'');
-  document.getElementById('tab-log').className='mb'+(t==='log'?' on':'');
-  document.getElementById('size-view').style.display=t==='size'?'block':'none';
-  document.getElementById('log-view').style.display=t==='log'?'block':'none';
-}
+var STORAGE_KEY = 'quicklog';
 
-function fillInst(){
-  var b=document.getElementById('brk').value;
-  var sel=document.getElementById('inst');
-  sel.innerHTML='';
-  PRESETS[b].forEach(function(p){var o=document.createElement('option');o.textContent=p.s;sel.appendChild(o)});
-  INST();
-}
-function BRK(){
-  var b=document.getElementById('brk').value;
-  // crypto perps: contract value field becomes informational
-  fillInst();
-}
-function INST(){
-  var b=document.getElementById('brk').value;
-  var name=document.getElementById('inst').value;
-  var p=PRESETS[b].find(function(x){return x.s===name});
-  if(p){
-    document.getElementById('cv').value=p.cv;
-    document.getElementById('cvHint').textContent='('+p.hint+')';
-  }
-  if(typeof CHART_OPEN!=='undefined' && CHART_OPEN){
-    FEED_OVERRIDE='';
-    var fi=document.getElementById('feedInput'); if(fi) fi.value=currentTV();
-    renderChart();
-  }
-  U();
-}
-function ACC(){
-  var v=document.getElementById('accPreset').value;
-  document.getElementById('accCustomWrap').style.display=v==='custom'?'block':'none';
-  U();
-}
-function getAcc(){
-  var v=document.getElementById('accPreset').value;
-  if(v==='custom') return P(document.getElementById('accCustom').value)||0;
-  return parseFloat(v);
-}
+// Inputs/selects whose raw value is persisted verbatim.
+var PERSISTED_FIELDS = [
+  'brk','accPreset','accCustom','inst','szRisk','cv','szEntry','szSL','szTP','feedInput',
+  'btId','pl','ast','ses','rsk','ent','slo','tpr','vol','stp','nte'
+];
 
-function P(v){return parseFloat(String(v).replace(',','.'))}
-function TD(){return new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'})}
+/* ---------- State ---------- */
 
-function calcSize(){
-  var acc=getAcc(),risk=P(document.getElementById('szRisk').value),
-      e=P(document.getElementById('szEntry').value),s=P(document.getElementById('szSL').value),
-      t=P(document.getElementById('szTP').value),cv=P(document.getElementById('cv').value);
-  if(isNaN(acc)||isNaN(risk)||isNaN(e)||isNaN(s)||isNaN(cv)||e===s||cv<=0) return null;
-  var riskAmt=acc*(risk/100);
-  var dist=Math.abs(e-s);
-  var vol=riskAmt/(dist*cv);
-  var rr=null,rewardAmt=null;
-  if(!isNaN(t)&&t!==e){rr=(Math.abs(t-e)/dist);rewardAmt=riskAmt*rr}
-  return {riskAmt:riskAmt,dist:dist,vol:vol,rr:rr,rewardAmt:rewardAmt};
-}
+var state = {
+  direction:'Long',   // 'Long' | 'Short'
+  mode:'live',        // 'live' | 'backtest'
+  tab:'size',         // 'size' | 'log'
+  chartOpen:false,
+  feedOverride:'',
+  cvManual:false      // true once the user types into the Contract Value field
+};
+
+/* ---------- Utils ---------- */
+
+function parseNum(v){ return parseFloat(String(v).replace(',','.')); }
+function today(){ return new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}); }
 
 function fmtVol(v){
   if(v>=100) return v.toFixed(1);
@@ -405,15 +390,85 @@ function fmtVol(v){
   return v.toFixed(3);
 }
 
+function toast(msg){
+  var t=$('tst'); t.textContent=msg; t.classList.add('vis');
+  setTimeout(function(){ t.classList.remove('vis'); },2200);
+}
+
+function copyText(txt){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){toast('Copied ✓')}).catch(function(){legacyCopy(txt)});
+  } else {
+    legacyCopy(txt);
+  }
+}
+function legacyCopy(txt){
+  var a=document.createElement('textarea');
+  a.value=txt; a.style.cssText='position:fixed;left:-9999px';
+  document.body.appendChild(a); a.select();
+  try{ document.execCommand('copy'); toast('Copied ✓'); }catch(e){ toast('Copy failed'); }
+  document.body.removeChild(a);
+}
+
+function currentPreset(){
+  var list=PRESETS[$('brk').value]||[];
+  var name=$('inst').value;
+  return list.find(function(x){return x.s===name;});
+}
+
+/* ---------- Sizer ---------- */
+
+// Resolve the contract value for a preset given the current entry.
+// JPY-quoted pairs derive cv = FX_LOT / entry; everything else is static.
+function contractValueFor(preset, entryStr){
+  if(preset && preset.quote==='JPY'){
+    var e=parseNum(entryStr);
+    if(isNaN(e)||e<=0) return NaN;
+    return FX_LOT/e;
+  }
+  return preset?parseNum(preset.cv):NaN;
+}
+
+// Keep the Contract Value field + hint in sync with instrument & entry.
+// For JPY pairs the field is auto-derived from entry unless the user overrode it.
+function syncContractValue(){
+  var p=currentPreset();
+  var hintEl=$('cvHint'), cvEl=$('cv');
+  if(p && p.quote==='JPY' && !state.cvManual){
+    var derived=contractValueFor(p,$('szEntry').value);
+    cvEl.value=isNaN(derived)?'':derived.toFixed(2);
+    hintEl.textContent='(≈ 100,000 ÷ entry — auto from entry price)';
+  } else if(p && p.quote==='JPY' && state.cvManual){
+    hintEl.textContent='(manual override — JPY auto-derive off)';
+  } else if(p){
+    hintEl.textContent='('+p.hint+')';
+  }
+}
+
+function calcSize(){
+  var acc=getAccount(),
+      risk=parseNum($('szRisk').value),
+      e=parseNum($('szEntry').value),
+      s=parseNum($('szSL').value),
+      t=parseNum($('szTP').value),
+      cv=parseNum($('cv').value);
+  if(isNaN(acc)||isNaN(risk)||isNaN(e)||isNaN(s)||isNaN(cv)||e===s||cv<=0) return null;
+  var riskAmt=acc*(risk/100);
+  var dist=Math.abs(e-s);
+  var vol=riskAmt/(dist*cv);
+  var rr=null, rewardAmt=null;
+  if(!isNaN(t)&&t!==e){ rr=Math.abs(t-e)/dist; rewardAmt=riskAmt*rr; }
+  return {riskAmt:riskAmt,dist:dist,vol:vol,rr:rr,rewardAmt:rewardAmt};
+}
+
 function renderSize(){
-  var b=document.getElementById('brk').value;
-  var unit=PRESETS[b].find(function(x){return x.s===document.getElementById('inst').value});
-  unit=unit?unit.unit:'lots';
+  syncContractValue();
+  var p=currentPreset();
+  var unit=p?p.unit:'lots';
   var r=calcSize();
-  var out=document.getElementById('szOut');
-  if(!r){out.innerHTML='<div style="color:var(--tx3);text-align:center;padding:8px">Enter account, entry, stop & contract value</div>';return}
-  var warn='';
-  if(r.vol<=0) warn='<div class="sz-warn">Invalid size — check inputs</div>';
+  var out=$('szOut');
+  if(!r){ out.innerHTML='<div style="color:var(--tx3);text-align:center;padding:8px">Enter account, entry, stop &amp; contract value</div>'; return; }
+  var warn = r.vol<=0 ? '<div class="sz-warn">Invalid size — check inputs</div>' : '';
   out.innerHTML=
     '<div class="sz-big"><div><span class="sz-vol">'+fmtVol(r.vol)+'</span><span class="sz-unit">'+unit+'</span></div>'
     +(r.rr?'<div style="text-align:right"><div class="cpl">R:R</div><div class="cbv" style="color:var(--gn);font-size:22px">'+r.rr.toFixed(2)+'R</div></div>':'')+'</div>'
@@ -424,127 +479,368 @@ function renderSize(){
     +'</div>'+warn;
 }
 
-/* ---------- send sizer → log ---------- */
-function TOLOG(){
-  var r=calcSize();
-  var instName=document.getElementById('inst').value.replace(/\s*\(.*\)/,''); // strip "(NDX)"
-  document.getElementById('ast').value=instName.toUpperCase();
-  document.getElementById('ent').value=document.getElementById('szEntry').value;
-  document.getElementById('slo').value=document.getElementById('szSL').value;
-  document.getElementById('tpr').value=document.getElementById('szTP').value;
-  document.getElementById('rsk').value=document.getElementById('szRisk').value;
-  if(r) document.getElementById('vol').value=fmtVol(r.vol);
-  ST('log');
-  U();
-  T('Sent to Trade Log ✓');
+function getAccount(){
+  var v=$('accPreset').value;
+  if(v==='custom') return parseNum($('accCustom').value)||0;
+  return parseFloat(v);
 }
 
-/* ===================== LOG LOGIC ===================== */
-function SM(m){M=m;document.getElementById('bl').className='mb'+(m==='live'?' on':'');document.getElementById('bb').className='mb'+(m==='backtest'?' on':'');document.getElementById('btf').style.display=m==='backtest'?'block':'none'}
-function SD(d){D=d;document.getElementById('blo').className='db'+(d==='Long'?' lo':'');document.getElementById('bsh').className='db'+(d==='Short'?' so':'');U()}
-function RR(){var e=P(document.getElementById('ent').value),s=P(document.getElementById('slo').value),t=P(document.getElementById('tpr').value);if(isNaN(e)||isNaN(s)||isNaN(t)||s===e)return null;return(Math.abs(t-e)/Math.abs(e-s)).toFixed(2)}
+/* ---------- Log card (shared by live Preview + PNG export) ---------- */
 
-function CH(){
-  var a=document.getElementById('ast').value||'—',se=document.getElementById('ses').value,st=document.getElementById('stp').value,ri=document.getElementById('rsk').value,en=document.getElementById('ent').value||'—',sl=document.getElementById('slo').value||'—',tp=document.getElementById('tpr').value||'—',no=document.getElementById('nte').value,r=RR(),iL=D==='Long';
-  return '<div class="ch"><div><div class="ca">'+a+'</div><div class="cs">'+se+' &middot; '+st+'</div></div><div style="text-align:right"><span class="cb '+(iL?'cbl':'cbs')+'">'+(iL?'&#8593; Long':'&#8595; Short')+'</span><div class="cdt">'+TD()+'</div></div></div><div class="chr"></div><div class="r3" style="margin-bottom:10px"><div class="cpb"><div class="cpl">Entry</div><div class="cpv">'+en+'</div></div><div class="cpb"><div class="cpl">Stop loss</div><div class="cpv">'+sl+'</div></div><div class="cpb"><div class="cpl">Take profit</div><div class="cpv">'+tp+'</div></div></div><div class="r2"><div class="cbg"><div class="cpl">R:R</div><div class="cbv" style="color:'+(r?(iL?'var(--gn)':'var(--rd)'):'var(--tx3)')+'">'+( r?r+'R':'—')+'</div></div><div class="cbg"><div class="cpl">Risk</div><div class="cbv" style="color:var(--tx)">'+ri+'%</div></div></div>'+(no?'<div class="cnt">'+no+'</div>':'');
+// Read the Trade Log fields into a plain data object.
+function readCard(){
+  return {
+    asset:   $('ast').value||'—',
+    session: $('ses').value,
+    setup:   $('stp').value,
+    risk:    $('rsk').value,
+    entry:   $('ent').value||'—',
+    sl:      $('slo').value||'—',
+    tp:      $('tpr').value||'—',
+    note:    $('nte').value,
+    rr:      logRR(),
+    isLong:  state.direction==='Long',
+    date:    today()
+  };
 }
 
-function U(){
-  if(TAB==='size') renderSize();
-  document.getElementById('prv').innerHTML=CH();
+function logRR(){
+  var e=parseNum($('ent').value), s=parseNum($('slo').value), t=parseNum($('tpr').value);
+  if(isNaN(e)||isNaN(s)||isNaN(t)||s===e) return null;
+  return (Math.abs(t-e)/Math.abs(e-s)).toFixed(2);
 }
 
-function FC(t){var a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;left:-9999px';document.body.appendChild(a);a.select();try{document.execCommand('copy');T('Copied ✓')}catch(e){T('Copy failed')}document.body.removeChild(a)}
-
-function CJ(){
-  var n=new Date(),dt=n.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+n.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  var r=RR()||'',a=document.getElementById('ast').value,se=document.getElementById('ses').value,ri=document.getElementById('rsk').value+'%',en=document.getElementById('ent').value,sl=document.getElementById('slo').value,tp=document.getElementById('tpr').value,vo=document.getElementById('vol').value,st=document.getElementById('stp').value,no=document.getElementById('nte').value,nf=st+(no?' – '+no:''),_='',row;
-  if(M==='backtest'){var bi=document.getElementById('btId').value,po=document.getElementById('pl').value;row=[bi,po,TD(),_,_,_,dt,a,_,en,_,sl,tp,vo,ri,_,_,_,r,_,_,D,se,_,nf,_,_,_]}
-  else{row=[_,dt,a,_,en,_,sl,tp,vo,ri,_,_,_,r,_,_,D,se,_,nf,_,_,_]}
-  var txt=row.join('\t');
-  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){T('Copied ✓')}).catch(function(){FC(txt)})}else{FC(txt)}
+// Inline-styled trade card (no CSS-var dependency) so the same markup
+// renders identically in the live preview box and in the detached
+// html2canvas node used for the PNG export.
+function cardHtml(d){
+  var rrColor = d.rr ? (d.isLong?'#3ecf8e':'#e5484d') : '#56565c';
+  var badgeBg = d.isLong?'rgba(62,207,142,.12)':'rgba(229,72,77,.12)';
+  var badgeFg = d.isLong?'#3ecf8e':'#e5484d';
+  var badgeTx = d.isLong?'↑ Long':'↓ Short';
+  function cell(label,val){
+    return '<div style="background:#0c0c0e;border-radius:8px;padding:10px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">'+label+'</div><div style="font-size:14px;font-weight:600;font-family:monospace;color:#e4e4e7">'+val+'</div></div>';
+  }
+  function big(label,val,color){
+    return '<div style="background:#0c0c0e;border-radius:8px;padding:12px 14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">'+label+'</div><div style="font-size:24px;font-weight:600;font-family:monospace;color:'+color+'">'+val+'</div></div>';
+  }
+  return '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">'
+    +'<div><div style="font-size:24px;font-weight:600;color:#e4e4e7">'+d.asset+'</div><div style="font-size:13px;color:#8a8a90;margin-top:4px">'+d.session+' · '+d.setup+'</div></div>'
+    +'<div style="text-align:right"><span style="display:inline-block;padding:4px 12px;border-radius:10px;font-size:13px;font-weight:600;background:'+badgeBg+';color:'+badgeFg+'">'+badgeTx+'</span><div style="font-size:11px;color:#56565c;margin-top:6px">'+d.date+'</div></div></div>'
+    +'<div style="height:1px;background:#2a2a2e;margin:14px 0"></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'+cell('Entry',d.entry)+cell('Stop loss',d.sl)+cell('Take profit',d.tp)+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+big('R:R',d.rr?d.rr+'R':'—',rrColor)+big('Risk',d.risk+'%','#e4e4e7')+'</div>'
+    +(d.note?'<div style="margin-top:12px;padding:10px 12px;background:#0c0c0e;border-radius:8px;font-size:13px;color:#8a8a90;font-style:italic">'+d.note+'</div>':'');
 }
 
-function EX(){
-  var b=document.getElementById('exb');b.textContent='Rendering...';b.style.pointerEvents='none';
+/* ---------- Log actions ---------- */
+
+function copyForSheet(){
+  var n=new Date();
+  var datetime=n.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+n.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  var setup=$('stp').value, note=$('nte').value;
+  var values={
+    btId:    $('btId').value,
+    pool:    $('pl').value,
+    date:    today(),
+    dt:      datetime,
+    asset:   $('ast').value,
+    entry:   $('ent').value,
+    sl:      $('slo').value,
+    tp:      $('tpr').value,
+    vol:     $('vol').value,
+    risk:    $('rsk').value+'%',
+    rr:      logRR()||'',
+    dir:     state.direction,
+    session: $('ses').value,
+    note:    setup+(note?' – '+note:'')
+  };
+  var cols=SHEET_COLUMNS[state.mode];
+  var row=cols.map(function(key){ return key?(values[key]||''):''; });
+  copyText(row.join('\t'));
+}
+
+function exportPng(){
+  var b=$('exb');
+  b.textContent='Rendering...'; b.style.pointerEvents='none';
   var tmp=document.createElement('div');
   tmp.style.cssText='position:absolute;left:-9999px;top:0;width:520px;padding:24px;background:#0c0c0e;border-radius:12px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;color:#e4e4e7;font-size:15px;line-height:1.5';
-  var a=document.getElementById('ast').value||'—',se=document.getElementById('ses').value,st=document.getElementById('stp').value,ri=document.getElementById('rsk').value,en=document.getElementById('ent').value||'—',sl=document.getElementById('slo').value||'—',tp=document.getElementById('tpr').value||'—',no=document.getElementById('nte').value,r=RR(),iL=D==='Long';
-  tmp.innerHTML='<div style="background:#151517;border:1px solid #2a2a2e;border-radius:12px;padding:20px">'
-    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px"><div><div style="font-size:24px;font-weight:600;color:#e4e4e7">'+a+'</div><div style="font-size:13px;color:#8a8a90;margin-top:4px">'+se+' · '+st+'</div></div><div style="text-align:right"><span style="display:inline-block;padding:4px 12px;border-radius:10px;font-size:13px;font-weight:600;background:'+(iL?'rgba(62,207,142,.12)':'rgba(229,72,77,.12)')+';color:'+(iL?'#3ecf8e':'#e5484d')+'">'+(iL?'↑ Long':'↓ Short')+'</span><div style="font-size:11px;color:#56565c;margin-top:6px">'+TD()+'</div></div></div>'
-    +'<div style="height:1px;background:#2a2a2e;margin:14px 0"></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'
-    +'<div style="background:#0c0c0e;border-radius:8px;padding:10px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">Entry</div><div style="font-size:14px;font-weight:600;font-family:monospace;color:#e4e4e7">'+en+'</div></div>'
-    +'<div style="background:#0c0c0e;border-radius:8px;padding:10px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">Stop loss</div><div style="font-size:14px;font-weight:600;font-family:monospace;color:#e4e4e7">'+sl+'</div></div>'
-    +'<div style="background:#0c0c0e;border-radius:8px;padding:10px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">Take profit</div><div style="font-size:14px;font-weight:600;font-family:monospace;color:#e4e4e7">'+tp+'</div></div></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
-    +'<div style="background:#0c0c0e;border-radius:8px;padding:12px 14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">R:R</div><div style="font-size:24px;font-weight:600;font-family:monospace;color:'+(r?(iL?'#3ecf8e':'#e5484d'):'#56565c')+'">'+( r?r+'R':'—')+'</div></div>'
-    +'<div style="background:#0c0c0e;border-radius:8px;padding:12px 14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">Risk</div><div style="font-size:24px;font-weight:600;font-family:monospace;color:#e4e4e7">'+ri+'%</div></div></div>'
-    +(no?'<div style="margin-top:12px;padding:10px 12px;background:#0c0c0e;border-radius:8px;font-size:13px;color:#8a8a90;font-style:italic">'+no+'</div>':'')
-    +'</div>';
+  var d=readCard();
+  tmp.innerHTML='<div style="background:#151517;border:1px solid #2a2a2e;border-radius:12px;padding:20px">'+cardHtml(d)+'</div>';
   document.body.appendChild(tmp);
   html2canvas(tmp,{backgroundColor:'#0c0c0e',scale:2,useCORS:true,logging:false}).then(function(c){
     document.body.removeChild(tmp);
-    var l=document.createElement('a');l.download=(a!=='—'?a:'trade').replace(/\//g,'-')+'_'+TD().replace(/\//g,'-')+'.png';l.href=c.toDataURL('image/png');l.click();
-    b.textContent='PNG for X';b.style.pointerEvents='auto';T('PNG saved ✓');
-  }).catch(function(e){document.body.removeChild(tmp);b.textContent='PNG for X';b.style.pointerEvents='auto';T('Error: '+e.message)});
-}
-
-
-/* ---------- TradingView chart ---------- */
-var TV_LOADED=false, CHART_OPEN=false, FEED_OVERRIDE='';
-function currentTV(){
-  var b=document.getElementById('brk').value;
-  var name=document.getElementById('inst').value;
-  var p=PRESETS[b].find(function(x){return x.s===name});
-  return p?p.tv:'';
-}
-function loadTVScript(cb){
-  if(window.TradingView){cb();return}
-  var s=document.createElement('script');
-  s.src='https://s3.tradingview.com/tv.js';
-  s.onload=cb;
-  document.body.appendChild(s);
-}
-function renderChart(){
-  var sym=FEED_OVERRIDE||currentTV();
-  var el=document.getElementById('tvChart');
-  if(!sym){el.innerHTML='<div style="color:var(--tx3);padding:24px;text-align:center;font-size:13px">No chart for custom symbol — enter levels manually</div>';return}
-  el.innerHTML='';
-  loadTVScript(function(){
-    new TradingView.widget({
-      container_id:'tvChart',
-      symbol:sym,
-      interval:'60',
-      timezone:'Europe/Vienna',
-      theme:'dark',
-      style:'1',
-      locale:'en',
-      toolbar_bg:'#0c0c0e',
-      hide_side_toolbar:true,
-      allow_symbol_change:true,
-      autosize:true
-    });
+    var l=document.createElement('a');
+    l.download=(d.asset!=='—'?d.asset:'trade').replace(/\//g,'-')+'_'+today().replace(/\//g,'-')+'.png';
+    l.href=c.toDataURL('image/png'); l.click();
+    b.textContent='PNG for X'; b.style.pointerEvents='auto'; toast('PNG saved ✓');
+  }).catch(function(e){
+    document.body.removeChild(tmp);
+    b.textContent='PNG for X'; b.style.pointerEvents='auto'; toast('Error: '+e.message);
   });
 }
+
+// Transfer the Sizer result into the Trade Log fields.
+function sendToLog(){
+  var r=calcSize();
+  var instName=$('inst').value.replace(/\s*\(.*\)/,''); // strip "(NDX)"
+  $('ast').value=instName.toUpperCase();
+  $('ent').value=$('szEntry').value;
+  $('slo').value=$('szSL').value;
+  $('tpr').value=$('szTP').value;
+  $('rsk').value=$('szRisk').value;
+  if(r) $('vol').value=fmtVol(r.vol);
+  setTab('log');
+  update();
+  toast('Sent to Trade Log ✓');
+}
+
+/* ---------- View switching ---------- */
+
+function setTab(t){
+  state.tab=t;
+  $('tab-size').className='mb'+(t==='size'?' on':'');
+  $('tab-log').className='mb'+(t==='log'?' on':'');
+  $('size-view').style.display=t==='size'?'block':'none';
+  $('log-view').style.display=t==='log'?'block':'none';
+  update();
+}
+function setMode(m){
+  state.mode=m;
+  $('bl').className='mb'+(m==='live'?' on':'');
+  $('bb').className='mb'+(m==='backtest'?' on':'');
+  $('btf').style.display=m==='backtest'?'block':'none';
+  saveState();
+}
+function setDirection(d){
+  state.direction=d;
+  $('blo').className='db'+(d==='Long'?' lo':'');
+  $('bsh').className='db'+(d==='Short'?' so':'');
+  update();
+}
+
+function fillInstruments(){
+  var sel=$('inst');
+  var keep=sel.value;
+  sel.innerHTML='';
+  (PRESETS[$('brk').value]||[]).forEach(function(p){
+    var o=document.createElement('option'); o.textContent=p.s; sel.appendChild(o);
+  });
+  // preserve current selection if still valid (used on restore)
+  if(keep && Array.prototype.some.call(sel.options,function(o){return o.value===keep;})) sel.value=keep;
+}
+
+function onBrokerChange(){
+  fillInstruments();
+  onInstrumentChange();
+}
+function onInstrumentChange(){
+  state.cvManual=false;
+  var p=currentPreset();
+  if(p && p.quote!=='JPY') $('cv').value=p.cv;   // JPY value is derived in syncContractValue()
+  if(state.chartOpen){
+    state.feedOverride='';
+    var fi=$('feedInput'); if(fi) fi.value=currentTV();
+    renderChart();
+  }
+  update();
+}
+function onAccPresetChange(){
+  $('accCustomWrap').style.display=$('accPreset').value==='custom'?'block':'none';
+  update();
+}
+
+/* ---------- Main update ---------- */
+
+function update(){
+  if(state.tab==='size') renderSize();
+  $('prv').innerHTML=cardHtml(readCard());
+  saveState();
+}
+
+/* ---------- TradingView chart ---------- */
+
+function currentTV(){
+  var p=currentPreset();
+  return p?p.tv:'';
+}
+
+// Load tv.js; invoke cb(ok). Falls back on error or timeout.
+function loadTVScript(cb){
+  if(window.TradingView){ cb(true); return; }
+  var done=false;
+  function finish(ok){ if(!done){ done=true; cb(ok); } }
+  var s=document.createElement('script');
+  s.src='https://s3.tradingview.com/tv.js';
+  var timer=setTimeout(function(){ finish(false); },6000);
+  s.onload=function(){ clearTimeout(timer); finish(true); };
+  s.onerror=function(){ clearTimeout(timer); finish(false); };
+  document.body.appendChild(s);
+}
+
+function renderChart(){
+  var sym=state.feedOverride||currentTV();
+  var el=$('tvChart');
+  el.style.display=''; el.style.flexDirection='';
+  if(!sym){ el.innerHTML='<div style="color:var(--tx3);padding:24px;text-align:center;font-size:13px">No chart for custom symbol — enter levels manually</div>'; return; }
+  el.innerHTML='';
+  loadTVScript(function(ok){
+    if(ok && window.TradingView){
+      el.style.display=''; el.style.flexDirection='';
+      el.innerHTML='';
+      new TradingView.widget({
+        container_id:'tvChart',
+        symbol:sym, interval:'60', timezone:'Europe/Vienna',
+        theme:'dark', style:'1', locale:'en',
+        toolbar_bg:'#0c0c0e', hide_side_toolbar:true,
+        allow_symbol_change:true, autosize:true
+      });
+    } else {
+      renderChartFallback(sym);
+    }
+  });
+}
+
+// tv.js blocked (CSP/network): use the embed iframe, which survives many
+// setups that block third-party script injection — plus an external link
+// as the ultimate fallback if the iframe itself is blank.
+function renderChartFallback(sym){
+  var el=$('tvChart');
+  var embed='https://s.tradingview.com/widgetembed/?frameElementId=tvIframe&symbol='+encodeURIComponent(sym)
+    +'&interval=60&theme=dark&style=1&timezone=Europe/Vienna&locale=en&toolbarbg=0c0c0e&hideideas=1&hidesidetoolbar=1';
+  var link='https://www.tradingview.com/chart/?symbol='+encodeURIComponent(sym);
+  el.style.display='flex'; el.style.flexDirection='column';
+  el.innerHTML='<iframe src="'+embed+'" title="TradingView chart" style="flex:1;width:100%;border:0" loading="lazy"></iframe>'
+    +'<a href="'+link+'" target="_blank" rel="noopener" style="display:block;padding:6px;text-align:center;font-size:12px;color:#8a8a90;background:#0c0c0e;text-decoration:none;border-top:1px solid #2a2a2e">Chart blocked here? Open on TradingView ↗</a>';
+}
+
 function applyFeed(){
-  var v=document.getElementById('feedInput').value.trim().toUpperCase();
-  FEED_OVERRIDE=v;
+  state.feedOverride=$('feedInput').value.trim().toUpperCase();
   renderChart();
 }
 function toggleChart(){
-  CHART_OPEN=!CHART_OPEN;
-  document.getElementById('chartWrap').style.display=CHART_OPEN?'block':'none';
-  document.getElementById('chartToggle').textContent=CHART_OPEN?'Hide Chart ▴':'Show Chart ▾';
-  if(CHART_OPEN){
-    var fi=document.getElementById('feedInput'); if(fi && !fi.value) fi.value=currentTV();
+  state.chartOpen=!state.chartOpen;
+  $('chartWrap').style.display=state.chartOpen?'block':'none';
+  $('chartToggle').textContent=state.chartOpen?'Hide Chart ▴':'Show Chart ▾';
+  if(state.chartOpen){
+    var fi=$('feedInput'); if(fi && !fi.value) fi.value=currentTV();
     renderChart();
   }
+  saveState();
 }
 
-/* init */
-fillInst();
-U();
+/* ---------- Persistence ---------- */
+
+function saveState(){
+  try{
+    var fields={};
+    PERSISTED_FIELDS.forEach(function(id){ var el=$(id); if(el) fields[id]=el.value; });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      v:1, fields:fields,
+      state:{
+        direction:state.direction, mode:state.mode, tab:state.tab,
+        chartOpen:state.chartOpen, feedOverride:state.feedOverride, cvManual:state.cvManual
+      }
+    }));
+  }catch(e){ /* storage unavailable / quota — non-fatal */ }
+}
+
+// Returns true if persisted data was found and applied.
+function loadState(){
+  var raw;
+  try{ raw=localStorage.getItem(STORAGE_KEY); }catch(e){ return false; }
+  if(!raw) return false;
+  var data;
+  try{ data=JSON.parse(raw); }catch(e){ return false; }
+  if(!data||!data.fields) return false;
+
+  // 1) Broker first, then rebuild instrument options so the saved
+  //    instrument value exists before we apply it.
+  if(data.fields.brk!=null && $('brk')) $('brk').value=data.fields.brk;
+  fillInstruments();
+
+  // 2) Restore every remaining field verbatim.
+  PERSISTED_FIELDS.forEach(function(id){
+    if(id==='brk') return;
+    var el=$(id);
+    if(el && data.fields[id]!=null) el.value=data.fields[id];
+  });
+
+  // 3) Restore UI state.
+  var s=data.state||{};
+  if(s.cvManual!=null) state.cvManual=!!s.cvManual;
+  if(s.feedOverride!=null) state.feedOverride=s.feedOverride;
+  if(s.direction) setDirection(s.direction);
+  if(s.mode) setMode(s.mode);
+  if(s.tab) setTab(s.tab);
+  $('accCustomWrap').style.display=$('accPreset').value==='custom'?'block':'none';
+  $('btf').style.display=state.mode==='backtest'?'block':'none';
+
+  if(s.chartOpen){
+    state.chartOpen=true;
+    $('chartWrap').style.display='block';
+    $('chartToggle').textContent='Hide Chart ▴';
+    renderChart();
+  }
+  return true;
+}
+
+/* ---------- Wiring ---------- */
+
+function on(id, evt, fn){ var el=$(id); if(el) el.addEventListener(evt, fn); }
+
+function bind(){
+  // tabs
+  on('tab-size','click',function(){ setTab('size'); });
+  on('tab-log','click',function(){ setTab('log'); });
+
+  // sizer
+  on('brk','change',onBrokerChange);
+  on('accPreset','change',onAccPresetChange);
+  on('accCustom','input',update);
+  on('inst','change',onInstrumentChange);
+  on('szRisk','change',update);
+  on('cv','input',function(){ state.cvManual=true; update(); });
+  on('szEntry','input',update);
+  on('szSL','input',update);
+  on('szTP','input',update);
+  on('chartToggle','click',toggleChart);
+  on('feedLoad','click',applyFeed);
+  on('toLogBtn','click',sendToLog);
+
+  // log
+  on('bl','click',function(){ setMode('live'); });
+  on('bb','click',function(){ setMode('backtest'); });
+  on('btId','input',update);
+  on('pl','input',update);
+  on('ast','input',function(){ this.value=this.value.toUpperCase(); update(); });
+  on('blo','click',function(){ setDirection('Long'); });
+  on('bsh','click',function(){ setDirection('Short'); });
+  on('ses','change',update);
+  on('rsk','change',update);
+  on('ent','input',update);
+  on('slo','input',update);
+  on('tpr','input',update);
+  on('vol','input',update);
+  on('stp','change',update);
+  on('nte','input',update);
+  on('cpb','click',copyForSheet);
+  on('exb','click',exportPng);
+}
+
+/* ---------- Init ---------- */
+
+function init(){
+  bind();
+  fillInstruments();
+  // Seed the default instrument's contract value on a fresh load;
+  // loadState() supplies it when prior inputs exist.
+  if(!loadState()) onInstrumentChange();
+  update();
+}
+
+init();
+})();
 </script>
 
 </div>
