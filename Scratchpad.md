@@ -32,12 +32,12 @@ Grund, Single-File aufzugeben).
 - **Relative Pfade überall** (Pages-Subpath). Chart bleibt online-only (Remote-Widget).
 - README/Stack-Abschnitt von „Single-File" auf neue Struktur + lokale-Serve-Notiz umschreiben.
 
-### P1 — User-Text in `cardHtml` escapen  ·  Status: offen  ·  Aufwand: S
+### P1 — User-Text in `cardHtml` escapen  ·  Status: ✅ merged → main (c4d1609)  ·  Aufwand: S
 **Warum:** Echter Bug. `asset`/`note` werden via `innerHTML` in Preview und PNG gerendert; ein `<`
 oder `&` in der Note bricht das Rendering. `esc()`-Helper um die User-Felder. (Im Sheet egal, dort
 Plaintext.)
 
-### P1 — Richtungs-bewusste Validierung  ·  Status: offen  ·  Aufwand: S
+### P1 — Richtungs-bewusste Validierung  ·  Status: ✅ merged → main (c4d1609)  ·  Aufwand: S
 **Warum:** `calcSize` rechnet stur. Warnung im `sz-warn`-Feld bei: SL auf falscher Seite je Long/Short,
 R:R < 1, Entry == SL, unplausibel große Risk-Distanz. Fängt Fat-Finger ab, bevor es ins Sheet geht.
 
@@ -49,6 +49,18 @@ R:R < 1, Entry == SL, unplausibel große Risk-Distanz. Fängt Fat-Finger ab, bev
 **Warum:** Größter funktionaler Hebel. Aktuell überlebt nur das *eine* offene Formular. Geloggte Trades
 als Liste in localStorage: „Log Trade" hängt an, darunter Liste zum Ansehen/Bearbeiten/Löschen/
 Re-Export. „Copy for Sheet" ist dann nicht mehr der einzige Persistenz-Ort.
+
+### P2 — Auto-Richtungserkennung (Long/Short aus Zahlen)  ·  Status: offen  ·  Aufwand: S
+**Warum:** Das Tool soll die Richtung selbst aus den Zahlenwerten ableiten statt manuell. Logik steht
+schon (Sizer leitet Richtung aus `sign(Entry − SL)` ab, siehe P1-Validierung). Hier: im **Trade Log**
+die Long/Short-Wahl (`state.direction`, Buttons `blo`/`bsh`) automatisch setzen, sobald Entry + SL
+gefüllt sind — Entry > SL ⇒ Long, Entry < SL ⇒ Short. Spart einen Klick und verhindert, dass die
+geloggte Richtung den Levels widerspricht.
+**Offene Design-Frage (vor Build klären):** Auto-Set vs. manueller Override — soll Auto bei jeder
+Entry/SL-Änderung greifen (überschreibt manuelle Wahl) oder nur, solange der User nicht selbst geklickt
+hat? Empfehlung: Auto leitet ab + setzt, ein manueller Klick „pinnt" die Wahl bis Asset/Reset.
+Akzeptanz: Direction-Badge im Preview + Sheet-Export-`dir` folgen der Ableitung; `cardHtml`/Sheet-Spalten
+unverändert.
 
 ### P3 — Politur  ·  Status: offen  ·  Aufwand: S
 - JPY-Crosses (EUR/JPY, GBP/JPY) in die Presets — die `quote:'JPY'`-Logik trägt sie schon.
