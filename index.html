@@ -384,6 +384,11 @@ var state = {
 function parseNum(v){ return parseFloat(String(v).replace(',','.')); }
 function today(){ return new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}); }
 
+// Escape free user text before it goes into innerHTML (Preview + PNG share cardHtml).
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function fmtVol(v){
   if(v>=100) return v.toFixed(1);
   if(v>=1)   return v.toFixed(2);
@@ -525,12 +530,12 @@ function cardHtml(d){
     return '<div style="background:#0c0c0e;border-radius:8px;padding:12px 14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">'+label+'</div><div style="font-size:24px;font-weight:600;font-family:monospace;color:'+color+'">'+val+'</div></div>';
   }
   return '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">'
-    +'<div><div style="font-size:24px;font-weight:600;color:#e4e4e7">'+d.asset+'</div><div style="font-size:13px;color:#8a8a90;margin-top:4px">'+d.session+' · '+d.setup+'</div></div>'
+    +'<div><div style="font-size:24px;font-weight:600;color:#e4e4e7">'+esc(d.asset)+'</div><div style="font-size:13px;color:#8a8a90;margin-top:4px">'+d.session+' · '+d.setup+'</div></div>'
     +'<div style="text-align:right"><span style="display:inline-block;padding:4px 12px;border-radius:10px;font-size:13px;font-weight:600;background:'+badgeBg+';color:'+badgeFg+'">'+badgeTx+'</span><div style="font-size:11px;color:#56565c;margin-top:6px">'+d.date+'</div></div></div>'
     +'<div style="height:1px;background:#2a2a2e;margin:14px 0"></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'+cell('Entry',d.entry)+cell('Stop loss',d.sl)+cell('Take profit',d.tp)+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+big('R:R',d.rr?d.rr+'R':'—',rrColor)+big('Risk',d.risk+'%','#e4e4e7')+'</div>'
-    +(d.note?'<div style="margin-top:12px;padding:10px 12px;background:#0c0c0e;border-radius:8px;font-size:13px;color:#8a8a90;font-style:italic">'+d.note+'</div>':'');
+    +(d.note?'<div style="margin-top:12px;padding:10px 12px;background:#0c0c0e;border-radius:8px;font-size:13px;color:#8a8a90;font-style:italic">'+esc(d.note)+'</div>':'');
 }
 
 /* ---------- Log actions ---------- */
