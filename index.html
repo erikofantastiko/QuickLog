@@ -89,6 +89,7 @@
 .tl .sz-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .tl .sz-cell{background:var(--bg);border-radius:8px;padding:9px 11px}
 .tl .sz-warn{margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13px;background:var(--rdbg);color:var(--rd);border:1px solid rgba(229,72,77,.3)}
+.tl .sz-warn.soft{background:rgba(138,138,144,.12);color:var(--tx2);border-color:rgba(138,138,144,.3)}
 .tl .hint{font-size:12px;color:var(--tx3);margin-top:-12px;margin-bottom:20px;line-height:1.4}
 .tl .tst{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
@@ -456,9 +457,15 @@ function calcSize(){
   var riskAmt=acc*(risk/100);
   var dist=Math.abs(e-s);
   var vol=riskAmt/(dist*cv);
-  var rr=null, rewardAmt=null;
-  if(!isNaN(t)&&t!==e){ rr=Math.abs(t-e)/dist; rewardAmt=riskAmt*rr; }
-  return {riskAmt:riskAmt,dist:dist,vol:vol,rr:rr,rewardAmt:rewardAmt};
+  var rr=null, rewardAmt=null, tpWrongSide=false;
+  // Direction is implicit: Entry>SL ⇒ Long, Entry<SL ⇒ Short.
+  // A TP on the wrong side (e.g. Long with TP below entry) would otherwise
+  // still show a plausible positive R:R via Math.abs — flag it instead.
+  if(!isNaN(t)&&t!==e){
+    tpWrongSide = Math.sign(e-s) !== Math.sign(t-e);
+    if(!tpWrongSide){ rr=Math.abs(t-e)/dist; rewardAmt=riskAmt*rr; }
+  }
+  return {riskAmt:riskAmt,dist:dist,vol:vol,rr:rr,rewardAmt:rewardAmt,tpWrongSide:tpWrongSide};
 }
 
 function renderSize(){
@@ -468,7 +475,17 @@ function renderSize(){
   var r=calcSize();
   var out=$('szOut');
   if(!r){ out.innerHTML='<div style="color:var(--tx3);text-align:center;padding:8px">Enter account, entry, stop &amp; contract value</div>'; return; }
-  var warn = r.vol<=0 ? '<div class="sz-warn">Invalid size — check inputs</div>' : '';
+  // Warnings, in precedence order: invalid size, then wrong-side TP
+  // (no R:R shown), then advisory R:R<1. Wrong-side wins over R:R<1
+  // because rr is null when the TP sits on the wrong side.
+  var warn = '';
+  if(r.vol<=0){
+    warn = '<div class="sz-warn">Invalid size — check inputs</div>';
+  } else if(r.tpWrongSide){
+    warn = '<div class="sz-warn">Take Profit on wrong side for this entry/stop — check direction</div>';
+  } else if(r.rr!=null && r.rr<1){
+    warn = '<div class="sz-warn soft">R:R below 1 — reward smaller than risk</div>';
+  }
   out.innerHTML=
     '<div class="sz-big"><div><span class="sz-vol">'+fmtVol(r.vol)+'</span><span class="sz-unit">'+unit+'</span></div>'
     +(r.rr?'<div style="text-align:right"><div class="cpl">R:R</div><div class="cbv" style="color:var(--gn);font-size:22px">'+r.rr.toFixed(2)+'R</div></div>':'')+'</div>'
