@@ -142,8 +142,15 @@ eq(M.SHEET_COLUMNS.backtest.length, 28, 'SHEET_COLUMNS.backtest length must be 2
 // sanity: presets were actually found
 ok(!!EURUSD && !!USDJPY, 'EUR/USD and USD/JPY presets must exist in PRESETS.ftmo');
 
+// FX_LOT is the standard-lot notional and the basis for JPY cv derivation. Pin it
+// EXACTLY (integer, no tolerance) — a small drift (e.g. 100000->100001) is otherwise
+// invisible to the loose cv/vol tolerances and would slip through unnoticed.
+eq(M.FX_LOT, 100000, 'FX_LOT must be 100000 (standard-lot notional)');
+
 // 2. contractValueFor — JPY derives cv = FX_LOT / entry; non-JPY is static.
-approx(M.contractValueFor(USDJPY, '150'), 666.67, 0.01, 'contractValueFor(USD/JPY,"150") ~= 666.67');
+//    Expect the EXACT 100000/150 at tol 1e-6 so FX_LOT drift also fails through the cv
+//    path, not only via the direct pin above. Rounded 666.67 +/-0.01 was too loose.
+approx(M.contractValueFor(USDJPY, '150'), 100000 / 150, 1e-6, 'contractValueFor(USD/JPY,"150") == 100000/150');
 eq(M.contractValueFor(EURUSD, '1.085'), 100000, 'contractValueFor(EUR/USD,"1.085") == 100000');
 
 // 3. Sizing of known trades via the REAL calcSize (account 100000, risk 0.25 => riskAmt 250).
