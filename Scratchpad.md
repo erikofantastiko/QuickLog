@@ -47,7 +47,7 @@ R:R < 1, Entry == SL, unplausibel große Risk-Distanz. Fängt Fat-Finger ab, bev
 **Warum:** `fmtVol` formatiert nur die Anzeige; 0.833 Lots ist nicht handelbar, wenn der Step 0.01 ist.
 `step` pro Instrument ins Preset, Volume auf handelbaren Step **abrunden** (Risk bleibt ≤ Ziel).
 
-### P2 — Trade-History-Liste  ·  Status: offen  ·  Aufwand: M–L
+### P2 — Trade-History-Liste  ·  Status: ✅ merged → main (cc43ca4)  ·  Aufwand: M–L
 **Warum:** Größter funktionaler Hebel. Aktuell überlebt nur das *eine* offene Formular. Geloggte Trades
 als Liste in localStorage: „Log Trade" hängt an, darunter Liste zum Ansehen/Bearbeiten/Löschen/
 Re-Export. „Copy for Sheet" ist dann nicht mehr der einzige Persistenz-Ort.
