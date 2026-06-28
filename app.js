@@ -75,7 +75,8 @@ var state = {
   chartOpen:false,
   feedOverride:'',
   cvManual:false,     // true once the user types into the Contract Value field
-  dirManual:false     // true once the user clicks Long/Short; auto-detect from entry vs SL until then
+  dirManual:false,    // true once the user clicks Long/Short; auto-detect from entry vs SL until then
+  lwc:null            // active Lightweight Charts crypto chart {chart,series,lines:[],resize} or null
 };
 
 /* ---------- Utils ---------- */
@@ -523,7 +524,10 @@ function onRskChange(){
 function update(){
   if(state.tab==='size') renderSize();
   $('prv').innerHTML=cardHtml(readCard());
-  renderChartLevels();
+  // Crypto chart active → move the real price lines (and keep chips cleared);
+  // otherwise refresh the TV-widget chips overlay.
+  if(state.lwc){ updateCryptoLevels(); var lv=$('chartLevels'); if(lv) lv.innerHTML=''; }
+  else renderChartLevels();
   saveState();
 }
 
@@ -532,6 +536,20 @@ function update(){
 function currentTV(){
   var p=currentPreset();
   return p?p.tv:'';
+}
+
+// Map a preset symbol string to a Binance spot symbol (<BASE>USDT), or null for
+// non-crypto. Covers the Breakout coins (BTC, ETH, …) and the FTMO crypto CFDs
+// (BTC/USD, ETH/USD). FX / indices / metals (EUR/USD, US100, XAU/USD) → null →
+// the caller keeps the existing TradingView widget + chips path.
+var CRYPTO_BASES = ['BTC','ETH','SOL','XRP','ADA','AVAX','LINK','DOGE'];
+function cryptoBinanceSymbol(presetSymbol){
+  if(!presetSymbol) return null;
+  var s=String(presetSymbol).toUpperCase().trim();
+  // Breakout presets are the bare coin ('BTC'); FTMO crypto is 'BTC/USD'.
+  var base=s.indexOf('/')>=0 ? s.split('/')[0] : s;
+  base=base.trim();
+  return CRYPTO_BASES.indexOf(base)>=0 ? base+'USDT' : null;
 }
 
 // Render Entry/SL/TP as colored chips overlaid on the sizer chart. The free
@@ -569,10 +587,20 @@ function loadTVScript(cb){
 }
 
 function renderChart(){
+  // Crypto dispatch: a Breakout coin or FTMO BTC/ETH with NO manual feed
+  // override gets the Lightweight Charts path (real Binance candles + price
+  // lines). A manual override is a deliberate power-user choice → TV widget.
+  var p=currentPreset();
+  var binance = state.feedOverride ? null : cryptoBinanceSymbol(p ? p.s : '');
+  if(binance){ renderCryptoChart(binance); return; }
+
+  // Non-crypto (or overridden): existing TradingView widget + chips path,
+  // unchanged. Tear down any live crypto chart first so we don't leak/double.
+  destroyCryptoChart();
   var sym=state.feedOverride||currentTV();
   var el=$('tvChart');
   el.style.display=''; el.style.flexDirection='';
-  if(!sym){ el.innerHTML='<div style="color:var(--tx3);padding:24px;text-align:center;font-size:13px">No chart for custom symbol — enter levels manually</div>'; return; }
+  if(!sym){ el.innerHTML='<div style="color:var(--tx3);padding:24px;text-align:center;font-size:13px">No chart for custom symbol — enter levels manually</div>'; renderChartLevels(); return; }
   el.innerHTML='';
   loadTVScript(function(ok){
     if(ok && window.TradingView){
@@ -604,6 +632,141 @@ function renderChartFallback(sym){
     +'<a href="'+link+'" target="_blank" rel="noopener" style="display:block;padding:6px;text-align:center;font-size:12px;color:#8a8a90;background:#0c0c0e;text-decoration:none;border-top:1px solid #2a2a2e">Chart blocked here? Open on TradingView ↗</a>';
 }
 
+/* ---------- Crypto chart (Lightweight Charts + Binance klines) ---------- */
+// For crypto instruments we draw real candles with horizontal Entry/SL/TP
+// price lines (createPriceLine) that move live as the levels are typed. The
+// FX/indices/metals path above (TV widget + chips) is untouched.
+
+// Load the vendored Lightweight Charts lib; cb(true) once window.LightweightCharts
+// exists, cb(false) if both vendored file and CDN fail. Idempotent (single tag).
+function loadLWC(cb){
+  if(window.LightweightCharts){ cb(true); return; }
+  var done=false;
+  function finish(ok){ if(!done){ done=true; cb(ok); } }
+  function inject(src, onFail){
+    var s=document.createElement('script');
+    s.src=src;
+    s.onload=function(){ finish(!!window.LightweightCharts); };
+    s.onerror=onFail;
+    document.body.appendChild(s);
+  }
+  inject('./vendor/lightweight-charts.standalone.production.js', function(){
+    // Vendored copy unreachable (e.g. opened from a path without it) → CDN.
+    inject('https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js', function(){ finish(false); });
+  });
+}
+
+// Tear down the active crypto chart and drop its refs. Safe to call when none
+// is active. Removes the resize listener so closed charts don't keep resizing.
+function destroyCryptoChart(){
+  var l=state.lwc;
+  if(!l) return;
+  state.lwc=null;
+  if(l.resize) try{ window.removeEventListener('resize', l.resize); }catch(e){}
+  if(l.chart) try{ l.chart.remove(); }catch(e){}
+}
+
+// Build the Lightweight Charts crypto chart for `sym` (Binance spot symbol),
+// fetch 1h klines, draw candles + level lines. Any lib-load or fetch/HTTP
+// failure falls back to the existing TV widget + chips so levels never vanish.
+function renderCryptoChart(sym){
+  // Tear down a prior crypto chart first (e.g. BTC→ETH switch) — no double chart.
+  destroyCryptoChart();
+  var el=$('tvChart');
+  el.style.display=''; el.style.flexDirection='';
+  el.innerHTML='<div style="color:var(--tx3);padding:24px;text-align:center;font-size:13px">Loading chart…</div>';
+  // Crypto path uses real price lines, not the chips overlay.
+  var lv=$('chartLevels'); if(lv) lv.innerHTML='';
+
+  function fallback(){
+    destroyCryptoChart();
+    // Hand back to the TV widget using the preset's own tv symbol (does NOT
+    // touch state.feedOverride — that stays a deliberate user choice).
+    var tv=currentTV();
+    if(tv){ var e2=$('tvChart'); e2.innerHTML=''; loadTVScript(function(ok){
+      if(ok && window.TradingView){ e2.innerHTML=''; new TradingView.widget({
+        container_id:'tvChart', symbol:tv, interval:'60', timezone:'Europe/Vienna',
+        theme:'dark', style:'1', locale:'en', toolbar_bg:'#0c0c0e',
+        hide_side_toolbar:true, allow_symbol_change:true, autosize:true });
+      } else { renderChartFallback(tv); }
+    }); } else { renderChartFallback(sym); }
+    renderChartLevels();
+  }
+
+  loadLWC(function(ok){
+    if(!ok || !window.LightweightCharts){ fallback(); return; }
+    // Guard: instrument/chart may have changed while the lib loaded.
+    var p=currentPreset();
+    if(!state.chartOpen || state.feedOverride || cryptoBinanceSymbol(p?p.s:'')!==sym){ return; }
+    el.innerHTML='';
+    var w=el.clientWidth||el.offsetWidth||520;
+    var chart, series;
+    try{
+      chart=window.LightweightCharts.createChart(el,{
+        width:w, height:360,
+        layout:{ background:{ color:'#0c0c0e' }, textColor:'#8a8a90' },
+        grid:{ vertLines:{ color:'#1d1d20' }, horzLines:{ color:'#1d1d20' } },
+        rightPriceScale:{ borderColor:'#2a2a2e' },
+        timeScale:{ borderColor:'#2a2a2e' }
+      });
+      series=chart.addCandlestickSeries({
+        upColor:'#3ecf8e', downColor:'#e5484d',
+        borderUpColor:'#3ecf8e', borderDownColor:'#e5484d',
+        wickUpColor:'#3ecf8e', wickDownColor:'#e5484d'
+      });
+    }catch(e){ fallback(); return; }
+
+    function onResize(){ try{ chart.applyOptions({ width: el.clientWidth||w }); }catch(e){} }
+    window.addEventListener('resize', onResize);
+    state.lwc={ chart:chart, series:series, lines:[], resize:onResize, sym:sym };
+
+    fetch('https://api.binance.com/api/v3/klines?symbol='+sym+'&interval=1h&limit=300')
+      .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+      .then(function(rows){
+        // Stale guard: a newer chart may have replaced this one mid-fetch.
+        if(state.lwc && state.lwc.chart===chart && Array.isArray(rows)){
+          var data=rows.map(function(r){ return { time:r[0]/1000, open:+r[1], high:+r[2], low:+r[3], close:+r[4] }; });
+          series.setData(data);
+          chart.timeScale().fitContent();
+          applyCryptoLevels();
+        }
+      })
+      .catch(function(){ if(state.lwc && state.lwc.chart===chart) fallback(); });
+  });
+}
+
+// Read szEntry/szSL/szTP and draw a dashed price line per valid value. Line
+// objects are tracked in state.lwc.lines so updateCryptoLevels can clear them.
+function applyCryptoLevels(){
+  var l=state.lwc; if(!l || !l.series) return;
+  var defs=[
+    { id:'szEntry', title:'ENTRY', color:'#e4e4e7' },
+    { id:'szSL',    title:'SL',    color:'#e5484d' },
+    { id:'szTP',    title:'TP',    color:'#3ecf8e' }
+  ];
+  defs.forEach(function(d){
+    var el=$(d.id); if(!el) return;
+    var v=parseNum(el.value);
+    if(isNaN(v)) return;
+    try{
+      var line=l.series.createPriceLine({
+        price:v, color:d.color, lineWidth:1, lineStyle:2 /* dashed */,
+        axisLabelVisible:true, title:d.title
+      });
+      l.lines.push(line);
+    }catch(e){ /* line draw failed — non-fatal */ }
+  });
+}
+
+// Redraw the level lines from the current inputs WITHOUT refetching candles.
+// Called from update() so the lines track as Entry/SL/TP are typed.
+function updateCryptoLevels(){
+  var l=state.lwc; if(!l || !l.series) return;
+  for(var i=0;i<l.lines.length;i++){ try{ l.series.removePriceLine(l.lines[i]); }catch(e){} }
+  l.lines=[];
+  applyCryptoLevels();
+}
+
 function applyFeed(){
   state.feedOverride=$('feedInput').value.trim().toUpperCase();
   renderChart();
@@ -616,7 +779,9 @@ function toggleChart(){
   if(state.chartOpen){
     var fi=$('feedInput'); if(fi && !fi.value) fi.value=currentTV();
     renderChart();
-    renderChartLevels();
+    if(!state.lwc) renderChartLevels();
+  } else {
+    destroyCryptoChart(); // closing the chart must not leak the LWC instance
   }
   saveState();
 }

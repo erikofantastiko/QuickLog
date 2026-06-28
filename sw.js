@@ -19,6 +19,7 @@ var SHELL = [
   './styles.css',
   './app.js',
   './vendor/html2canvas.min.js',
+  './vendor/lightweight-charts.standalone.production.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -57,8 +58,9 @@ self.addEventListener('fetch', function (event) {
   // Only GET is cacheable; let POST/PUT/etc. go straight to the network.
   if (req.method !== 'GET') return;
 
-  // Same-origin only. Cross-origin (TradingView s3/s.tradingview.com, OANDA,
-  // Kraken, CDNs) is passed through untouched and never cached.
+  // Same-origin only. Cross-origin (TradingView s3/s.tradingview.com, Binance
+  // api.binance.com klines, OANDA, Kraken, CDNs) is passed through untouched
+  // and never cached.
   var sameOrigin = new URL(req.url).origin === self.location.origin;
   if (!sameOrigin) return; // default browser fetch
 
