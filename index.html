@@ -148,8 +148,14 @@
         <option value="0.25" selected>0.25%</option>
         <option value="0.50">0.50%</option>
         <option value="1.00">1.00%</option>
+        <option value="custom">Custom…</option>
       </select>
     </div>
+  </div>
+
+  <div class="fi" id="szRiskCustomWrap" style="display:none">
+    <label>Custom Risk %</label>
+    <input type="text" id="szRiskCustom" placeholder="0.33">
   </div>
 
   <div class="fi" id="cvWrap">
@@ -243,8 +249,14 @@
       <select id="rsk">
         <option value="0.10">0.10%</option><option value="0.25" selected>0.25%</option>
         <option value="0.50">0.50%</option><option value="1.00">1.00%</option>
+        <option value="custom">Custom…</option>
       </select>
     </div>
+  </div>
+
+  <div class="fi" id="rskCustomWrap" style="display:none">
+    <label>Custom Risk %</label>
+    <input type="text" id="rskCustom" placeholder="0.33">
   </div>
 
   <div class="sp"></div>
@@ -367,8 +379,8 @@ var STORAGE_KEY = 'quicklog';
 
 // Inputs/selects whose raw value is persisted verbatim.
 var PERSISTED_FIELDS = [
-  'brk','accPreset','accCustom','inst','szRisk','cv','szEntry','szSL','szTP','feedInput',
-  'btId','pl','ast','ses','rsk','ent','slo','tpr','vol','stp','nte'
+  'brk','accPreset','accCustom','inst','szRisk','szRiskCustom','cv','szEntry','szSL','szTP','feedInput',
+  'btId','pl','ast','ses','rsk','rskCustom','ent','slo','tpr','vol','stp','nte'
 ];
 
 /* ---------- State ---------- */
@@ -466,9 +478,16 @@ function syncContractValue(){
   }
 }
 
+// Sizer risk %: 'custom' select value falls back to the free-text field,
+// mirroring getAccount()'s preset/custom split.
+function getSizerRisk(){
+  if($('szRisk').value==='custom') return parseNum($('szRiskCustom').value);
+  return parseFloat($('szRisk').value);
+}
+
 function calcSize(){
   var acc=getAccount(),
-      risk=parseNum($('szRisk').value),
+      risk=getSizerRisk(),
       e=parseNum($('szEntry').value),
       s=parseNum($('szSL').value),
       t=parseNum($('szTP').value),
@@ -527,6 +546,14 @@ function getAccount(){
   return parseFloat(v);
 }
 
+// Log risk %: 'custom' select value falls back to the free-text field. Returns
+// the bare value (no '%') — copyForSheet/cardHtml append the unit. The sheet
+// column ORDER is unchanged; only the value source switches for custom.
+function getLogRisk(){
+  if($('rsk').value==='custom') return parseNum($('rskCustom').value);
+  return $('rsk').value;
+}
+
 /* ---------- Log card (shared by live Preview + PNG export) ---------- */
 
 // Read the Trade Log fields into a plain data object.
@@ -535,7 +562,7 @@ function readCard(){
     asset:   $('ast').value||'—',
     session: $('ses').value,
     setup:   $('stp').value,
-    risk:    $('rsk').value,
+    risk:    getLogRisk(),
     entry:   $('ent').value||'—',
     sl:      $('slo').value||'—',
     tp:      $('tpr').value||'—',
@@ -591,7 +618,7 @@ function copyForSheet(){
     sl:      $('slo').value,
     tp:      $('tpr').value,
     vol:     $('vol').value,
-    risk:    $('rsk').value+'%',
+    risk:    getLogRisk()+'%',
     rr:      logRR()||'',
     dir:     state.direction,
     session: $('ses').value,
@@ -646,7 +673,10 @@ function sendToLog(){
   $('ent').value=$('szEntry').value;
   $('slo').value=$('szSL').value;
   $('tpr').value=$('szTP').value;
+  // Carry risk %, including a custom free-text value, into the log.
   $('rsk').value=$('szRisk').value;
+  if($('szRisk').value==='custom') $('rskCustom').value=$('szRiskCustom').value;
+  $('rskCustomWrap').style.display=$('rsk').value==='custom'?'block':'none';
   if(r) $('vol').value=roundVol(r.vol).toFixed(stepDecimals());
   setTab('log');
   update();
@@ -719,6 +749,14 @@ function onInstrumentChange(){
 }
 function onAccPresetChange(){
   $('accCustomWrap').style.display=$('accPreset').value==='custom'?'block':'none';
+  update();
+}
+function onSzRiskChange(){
+  $('szRiskCustomWrap').style.display=$('szRisk').value==='custom'?'block':'none';
+  update();
+}
+function onRskChange(){
+  $('rskCustomWrap').style.display=$('rsk').value==='custom'?'block':'none';
   update();
 }
 
@@ -850,6 +888,8 @@ function loadState(){
   if(s.mode) setMode(s.mode);
   if(s.tab) setTab(s.tab);
   $('accCustomWrap').style.display=$('accPreset').value==='custom'?'block':'none';
+  $('szRiskCustomWrap').style.display=$('szRisk').value==='custom'?'block':'none';
+  $('rskCustomWrap').style.display=$('rsk').value==='custom'?'block':'none';
   $('btf').style.display=state.mode==='backtest'?'block':'none';
 
   if(s.chartOpen){
@@ -875,7 +915,8 @@ function bind(){
   on('accPreset','change',onAccPresetChange);
   on('accCustom','input',update);
   on('inst','change',onInstrumentChange);
-  on('szRisk','change',update);
+  on('szRisk','change',onSzRiskChange);
+  on('szRiskCustom','input',update);
   on('cv','input',function(){ state.cvManual=true; update(); });
   on('szEntry','input',update);
   on('szSL','input',update);
@@ -893,7 +934,8 @@ function bind(){
   on('blo','click',function(){ setDirection('Long', true); });
   on('bsh','click',function(){ setDirection('Short', true); });
   on('ses','change',update);
-  on('rsk','change',update);
+  on('rsk','change',onRskChange);
+  on('rskCustom','input',update);
   on('ent','input',function(){ maybeAutoDirection(); update(); });
   on('slo','input',function(){ maybeAutoDirection(); update(); });
   on('tpr','input',update);
