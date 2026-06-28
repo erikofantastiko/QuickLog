@@ -59,8 +59,9 @@ self.addEventListener('fetch', function (event) {
   if (req.method !== 'GET') return;
 
   // Same-origin only. Cross-origin (TradingView s3/s.tradingview.com, Kraken
-  // api.kraken.com OHLC, OANDA, CDNs) is passed through untouched and never
-  // cached.
+  // api.kraken.com OHLC, Twelve Data api.twelvedata.com FX/metal OHLC, OANDA,
+  // CDNs) is passed through untouched and never cached. The Lightweight Charts
+  // lib itself is same-origin (vendored) and already precached in SHELL.
   var sameOrigin = new URL(req.url).origin === self.location.origin;
   if (!sameOrigin) return; // default browser fetch
 

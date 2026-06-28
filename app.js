@@ -592,12 +592,18 @@ function loadTVScript(cb){
 }
 
 function renderChart(){
-  // Crypto dispatch: a Breakout coin or FTMO BTC/ETH with NO manual feed
-  // override gets the Lightweight Charts path (real Kraken candles + price
-  // lines). A manual override is a deliberate power-user choice → TV widget.
+  // Dispatch, in priority order:
+  //   a) Crypto with NO manual override → Lightweight Charts + Kraken candles.
+  //   b) FX / metals with NO override AND a Twelve Data key → LWC + TD candles.
+  //   c) Everything else (indices, FX-without-key, override, custom) →
+  //      existing TradingView widget + chips path.
+  // A manual feed override is a deliberate power-user choice → always TV widget.
   var p=currentPreset();
   var krakenPair = state.feedOverride ? null : cryptoKrakenPair(p ? p.s : '');
   if(krakenPair){ renderCryptoChart(krakenPair); return; }
+
+  var tdSym = state.feedOverride ? null : twelveDataSymbol(p ? p.s : '');
+  if(tdSym && tdKey()){ destroyCryptoChart(); renderTwelveDataChart(tdSym); return; }
 
   // Non-crypto (or overridden): existing TradingView widget + chips path,
   // unchanged. Tear down any live crypto chart first so we don't leak/double.
@@ -671,17 +677,33 @@ function destroyCryptoChart(){
   if(l.chart) try{ l.chart.remove(); }catch(e){}
 }
 
-// Build the Lightweight Charts crypto chart for `sym` (Kraken request pair),
-// fetch 1h OHLC, draw candles + level lines. Any lib-load / fetch / HTTP /
-// API-error / shape failure falls back to the existing TV widget + chips so
-// levels never vanish.
-function renderCryptoChart(sym){
-  // Tear down a prior crypto chart first (e.g. BTC→ETH switch) — no double chart.
+// Which symbol the dispatch would currently bind to an LWC chart (Kraken crypto
+// or — with a key — a Twelve Data FX/metal), or null. Used as the post-load
+// staleness guard so a chart that finished loading after the instrument changed
+// bails instead of drawing the wrong symbol. Mirrors renderChart's a/b branches.
+function currentLWCSym(){
+  if(state.feedOverride) return null;
+  var p=currentPreset(), s=p?p.s:'';
+  var kr=cryptoKrakenPair(s);
+  if(kr) return kr;
+  var td=twelveDataSymbol(s);
+  if(td && tdKey()) return td;
+  return null;
+}
+
+// Shared Lightweight Charts core. `displaySym` is the symbol this chart is bound
+// to (Kraken request pair OR Twelve Data symbol) — used only for the staleness
+// guard and fallback. `fetchFn()` returns Promise<Array<{time,open,high,low,close}>>
+// (time in seconds, ascending). Builds the dark candlestick chart, draws the
+// Entry/SL/TP price lines, and falls back to the TV widget + chips on ANY
+// lib-load / fetch / shape failure so levels never vanish.
+function renderLWCChart(displaySym, fetchFn){
+  // Tear down a prior chart first (e.g. BTC→ETH or EURUSD switch) — no double chart.
   destroyCryptoChart();
   var el=$('tvChart');
   el.style.display=''; el.style.flexDirection='';
   el.innerHTML='<div style="color:var(--tx3);padding:24px;text-align:center;font-size:13px">Loading chart…</div>';
-  // Crypto path uses real price lines, not the chips overlay.
+  // The LWC path uses real price lines, not the chips overlay.
   var lv=$('chartLevels'); if(lv) lv.innerHTML='';
 
   function fallback(){
@@ -695,15 +717,14 @@ function renderCryptoChart(sym){
         theme:'dark', style:'1', locale:'en', toolbar_bg:'#0c0c0e',
         hide_side_toolbar:true, allow_symbol_change:true, autosize:true });
       } else { renderChartFallback(tv); }
-    }); } else { renderChartFallback(sym); }
+    }); } else { renderChartFallback(displaySym); }
     renderChartLevels();
   }
 
   loadLWC(function(ok){
     if(!ok || !window.LightweightCharts){ fallback(); return; }
     // Guard: instrument/chart may have changed while the lib loaded.
-    var p=currentPreset();
-    if(!state.chartOpen || state.feedOverride || cryptoKrakenPair(p?p.s:'')!==sym){ return; }
+    if(!state.chartOpen || currentLWCSym()!==displaySym){ return; }
     el.innerHTML='';
     var w=el.clientWidth||el.offsetWidth||520;
     var chart, series;
@@ -724,30 +745,107 @@ function renderCryptoChart(sym){
 
     function onResize(){ try{ chart.applyOptions({ width: el.clientWidth||w }); }catch(e){} }
     window.addEventListener('resize', onResize);
-    state.lwc={ chart:chart, series:series, lines:[], resize:onResize, sym:sym };
+    state.lwc={ chart:chart, series:series, lines:[], resize:onResize, sym:displaySym };
 
-    fetch('https://api.kraken.com/0/public/OHLC?pair='+sym+'&interval=60')
-      .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
-      .then(function(json){
+    fetchFn()
+      .then(function(data){
         // Stale guard: a newer chart may have replaced this one mid-fetch.
         if(!(state.lwc && state.lwc.chart===chart)) return;
-        // Kraken error envelope: { error:[...], result:{ <canonicalPair>:[[t,o,h,l,c,vwap,vol,cnt]...], last } }.
-        if(json && json.error && json.error.length){ fallback(); return; }
-        var result=json && json.result;
-        if(!result){ fallback(); return; }
-        // The canonical key (e.g. 'XXBTZUSD') is whatever Kraken returns — take
-        // the first non-'last' key rather than guessing the normalised name.
-        var keys=Object.keys(result).filter(function(k){ return k!=='last'; });
-        var rows=keys.length ? result[keys[0]] : null;
-        if(!rows || !rows.length){ fallback(); return; }
-        // Kraken time is already seconds; o/h/l/c are strings → coerce with +.
-        var data=rows.map(function(r){ return { time:r[0], open:+r[1], high:+r[2], low:+r[3], close:+r[4] }; });
+        if(!data || !data.length){ fallback(); return; }
         series.setData(data);
         chart.timeScale().fitContent();
         applyCryptoLevels();
       })
       .catch(function(){ if(state.lwc && state.lwc.chart===chart) fallback(); });
   });
+}
+
+// Fetch 1h OHLC from Kraken for `sym` (request pair) and normalise to the
+// LWC candle shape. Throws on HTTP error / Kraken error envelope / empty
+// result so renderLWCChart falls back to the TV widget + chips.
+function krakenFetch(sym){
+  return fetch('https://api.kraken.com/0/public/OHLC?pair='+sym+'&interval=60')
+    .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+    .then(function(json){
+      // Kraken error envelope: { error:[...], result:{ <canonicalPair>:[[t,o,h,l,c,vwap,vol,cnt]...], last } }.
+      if(json && json.error && json.error.length) throw new Error('kraken error');
+      var result=json && json.result;
+      if(!result) throw new Error('no result');
+      // The canonical key (e.g. 'XXBTZUSD') is whatever Kraken returns — take
+      // the first non-'last' key rather than guessing the normalised name.
+      var keys=Object.keys(result).filter(function(k){ return k!=='last'; });
+      var rows=keys.length ? result[keys[0]] : null;
+      if(!rows || !rows.length) throw new Error('empty rows');
+      // Kraken time is already seconds; o/h/l/c are strings → coerce with +.
+      return rows.map(function(r){ return { time:r[0], open:+r[1], high:+r[2], low:+r[3], close:+r[4] }; });
+    });
+}
+
+// Crypto chart = shared LWC core fed by Kraken. Behaviour is unchanged from the
+// pre-refactor inline version.
+function renderCryptoChart(sym){
+  renderLWCChart(sym, function(){ return krakenFetch(sym); });
+}
+
+/* ---------- Twelve Data chart (FX + metals, real lines) ---------- */
+// FX pairs + metals (XAU/XAG) get real candles + Entry/SL/TP lines via Twelve
+// Data (free tier, user-supplied API key). Indices (US100/US500) have no TD
+// free coverage → they stay on the TV widget. Crypto stays on Kraken.
+//
+// SECURITY: the API key lives ONLY in localStorage under its own key
+// ('quicklog_td_key'). It is deliberately NOT in PERSISTED_FIELDS / the
+// 'quicklog' blob, NOT in cardHtml / sizerCardHtml / PNG export / copyForSheet,
+// and never logged. The only place it leaves the browser is the TD request URL.
+
+var TD_KEY_STORAGE = 'quicklog_td_key';
+function tdKey(){
+  try{ return localStorage.getItem(TD_KEY_STORAGE)||''; }catch(e){ return ''; }
+}
+function setTdKey(v){
+  try{ localStorage.setItem(TD_KEY_STORAGE, v||''); }catch(e){ /* storage unavailable — non-fatal */ }
+}
+
+// Map a sizer preset symbol to its Twelve Data symbol for FX + metals, else
+// null. Crypto (BTC/USD, ETH/USD) → null (Kraken). Indices (US100/US500) →
+// null (no TD free coverage → TV widget). Custom/empty → null.
+var TWELVE_DATA_SYMBOLS = {
+  'EUR/USD':'EUR/USD','GBP/USD':'GBP/USD','USD/JPY':'USD/JPY','EUR/GBP':'EUR/GBP',
+  'AUD/USD':'AUD/USD','USD/CAD':'USD/CAD','EUR/JPY':'EUR/JPY','GBP/JPY':'GBP/JPY',
+  'XAU/USD':'XAU/USD','XAG/USD':'XAG/USD'
+};
+function twelveDataSymbol(presetSymbol){
+  if(!presetSymbol) return null;
+  return Object.prototype.hasOwnProperty.call(TWELVE_DATA_SYMBOLS, presetSymbol)
+    ? TWELVE_DATA_SYMBOLS[presetSymbol] : null;
+}
+
+// Fetch 1h OHLC from Twelve Data for `sym` and normalise to the LWC candle
+// shape (time in seconds, ascending). Throws on TD error status / missing
+// values so renderLWCChart falls back to the TV widget + chips.
+function tdFetch(sym){
+  return fetch('https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(sym)
+      +'&interval=1h&outputsize=300&apikey='+encodeURIComponent(tdKey()))
+    .then(function(res){ return res.json(); })
+    .then(function(json){
+      // TD error envelope: { status:'error', code, message }. Free-tier limits /
+      // bad key / unsupported symbol all surface here → fall back.
+      if(!json || json.status==='error' || !Array.isArray(json.values)) throw new Error('td error');
+      // values are NEWEST-first → map then sort ascending by time (LWC needs that).
+      var data=json.values.map(function(v){
+        // datetime is 'YYYY-MM-DD HH:MM:SS' in UTC.
+        return {
+          time:Math.floor(new Date(v.datetime.replace(' ','T')+'Z').getTime()/1000),
+          open:+v.open, high:+v.high, low:+v.low, close:+v.close
+        };
+      });
+      data.sort(function(a,b){ return a.time-b.time; });
+      return data;
+    });
+}
+
+// FX/metal chart = shared LWC core fed by Twelve Data.
+function renderTwelveDataChart(sym){
+  renderLWCChart(sym, function(){ return tdFetch(sym); });
 }
 
 // Read szEntry/szSL/szTP and draw a dashed price line per valid value. Line
@@ -1012,6 +1110,10 @@ function bind(){
   on('szTP','input',update);
   on('chartToggle','click',toggleChart);
   on('feedLoad','click',applyFeed);
+  // Twelve Data key: localStorage-only (never in the 'quicklog' blob). Persist
+  // on every keystroke, then re-render so the chart upgrades to real lines the
+  // moment a valid key is present.
+  on('tdKey','input',function(){ setTdKey(this.value.trim()); renderChart(); });
   on('toLogBtn','click',sendToLog);
   on('szExb','click',exportSizerPng);
 
@@ -1044,6 +1146,9 @@ function bind(){
 
 function init(){
   bind();
+  // Restore the Twelve Data key from its OWN localStorage key (never via the
+  // 'quicklog' form-state blob). Field is type=password so it isn't shoulder-read.
+  var tk=$('tdKey'); if(tk) tk.value=tdKey();
   fillInstruments();
   // Seed the default instrument's contract value on a fresh load;
   // loadState() supplies it when prior inputs exist.
