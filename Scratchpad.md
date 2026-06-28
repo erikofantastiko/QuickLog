@@ -64,10 +64,10 @@ hat? Empfehlung: Auto leitet ab + setzt, ein manueller Klick „pinnt" die Wahl 
 Akzeptanz: Direction-Badge im Preview + Sheet-Export-`dir` folgen der Ableitung; `cardHtml`/Sheet-Spalten
 unverändert.
 
-### P3 — Politur  ·  Status: offen  ·  Aufwand: S
-- JPY-Crosses (EUR/JPY, GBP/JPY) in die Presets — die `quote:'JPY'`-Logik trägt sie schon.
-- Custom-Risk-Feld analog zur Account-Size.
-- Sizer-Karte ebenfalls als PNG/Copy exportierbar.
+### P3 — Politur  ·  Status: teilweise  ·  Aufwand: S
+- ✅ JPY-Crosses (EUR/JPY, GBP/JPY) in die Presets — merged → main (620f345).
+- ⬜ Custom-Risk-Feld analog zur Account-Size (Sizer + Log; berührt `copyForSheet`-Risk-WERT, nicht Spalten).
+- ⬜ Sizer-Karte ebenfalls als PNG/Copy exportierbar.
 
 ### P3 — Tests für die Geld-Mathematik  ·  Status: ✅ merged → main (cf5148b)  ·  Aufwand: S
 **Warum:** `contractValueFor`/`calcSize` dürfen nie still regredieren. Kleines `test.mjs`, das sie
