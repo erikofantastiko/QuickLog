@@ -13,6 +13,8 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   durch id-basiertes `addEventListener` ersetzt; geteiltes `cardHtml()` für Live-Preview *und* PNG.
   Sheet-Spaltenreihenfolge unverändert.
 - **Persistenz** — alle Inputs + UI-State in `localStorage['quicklog']`, Restore beim Laden.
+- **PNG → Zwischenablage** — „PNG for X" kopiert das Karten-PNG direkt in die Clipboard
+  (`ClipboardItem`, Safari-tauglich), Datei-Download als Fallback. Loop-Verdict APPROVE.
 
 ## Backlog (priorisiert)
 
