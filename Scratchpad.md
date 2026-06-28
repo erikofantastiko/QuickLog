@@ -66,7 +66,7 @@ unverändert.
 
 ### P3 — Politur  ·  Status: teilweise  ·  Aufwand: S
 - ✅ JPY-Crosses (EUR/JPY, GBP/JPY) in die Presets — merged → main (620f345).
-- ⬜ Custom-Risk-Feld analog zur Account-Size (Sizer + Log; berührt `copyForSheet`-Risk-WERT, nicht Spalten).
+- ✅ Custom-Risk-Feld (Sizer + Log) — merged → main (361391b); Test 20→25.
 - ⬜ Sizer-Karte ebenfalls als PNG/Copy exportierbar.
 
 ### P3 — Tests für die Geld-Mathematik  ·  Status: ✅ merged → main (cf5148b)  ·  Aufwand: S
