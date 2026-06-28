@@ -280,7 +280,7 @@ function cardHtml(d){
     +'<div><div style="font-size:24px;font-weight:600;color:#e4e4e7">'+esc(d.asset)+'</div><div style="font-size:13px;color:#8a8a90;margin-top:4px">'+d.session+' · '+d.setup+'</div></div>'
     +'<div style="text-align:right"><span style="display:inline-block;padding:4px 12px;border-radius:10px;font-size:13px;font-weight:600;background:'+badgeBg+';color:'+badgeFg+'">'+badgeTx+'</span><div style="font-size:11px;color:#56565c;margin-top:6px">'+d.date+'</div></div></div>'
     +'<div style="height:1px;background:#2a2a2e;margin:14px 0"></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'+cell('Entry',d.entry)+cell('Stop loss',d.sl)+cell('Take profit',d.tp)+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'+cell('Entry',esc(d.entry))+cell('Stop loss',esc(d.sl))+cell('Take profit',esc(d.tp))+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+big('R:R',d.rr?d.rr+'R':'—',rrColor)+big('Risk',d.risk+'%','#e4e4e7')+'</div>'
     +(d.note?'<div style="margin-top:12px;padding:10px 12px;background:#0c0c0e;border-radius:8px;font-size:13px;color:#8a8a90;font-style:italic">'+esc(d.note)+'</div>':'');
 }
@@ -332,7 +332,7 @@ function sizerCardHtml(d){
     +'<div><div style="font-size:24px;font-weight:600;color:#e4e4e7">'+esc(d.instrument)+'</div><div style="font-size:13px;color:#8a8a90;margin-top:4px">'+esc(d.broker)+' · $'+d.account.toLocaleString('en-US')+' · '+d.risk+'%</div></div>'
     +'<div style="text-align:right"><span style="display:inline-block;padding:4px 12px;border-radius:10px;font-size:13px;font-weight:600;background:'+badgeBg+';color:'+badgeFg+'">'+badgeTx+'</span><div style="font-size:11px;color:#56565c;margin-top:6px">'+d.date+'</div></div></div>'
     +'<div style="background:#0c0c0e;border-radius:8px;padding:14px 16px;margin-bottom:14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">Position size</div><div style="font-size:32px;font-weight:700;font-family:monospace;color:#e4e4e7">'+d.vol+'<span style="font-size:15px;font-weight:600;color:#8a8a90;margin-left:8px">'+d.unit+'</span></div></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'+cell('Entry',d.entry)+cell('Stop loss',d.sl)+cell('Take profit',d.tp)+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'+cell('Entry',esc(d.entry))+cell('Stop loss',esc(d.sl))+cell('Take profit',esc(d.tp))+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+big('R:R',d.rr!=null?d.rr.toFixed(2)+'R':'—',rrColor)+big('Risk',' $'+d.riskAmt.toFixed(0),'#e4e4e7')+'</div>';
 }
 
@@ -523,6 +523,7 @@ function onRskChange(){
 function update(){
   if(state.tab==='size') renderSize();
   $('prv').innerHTML=cardHtml(readCard());
+  renderChartLevels();
   saveState();
 }
 
@@ -531,6 +532,27 @@ function update(){
 function currentTV(){
   var p=currentPreset();
   return p?p.tv:'';
+}
+
+// Render Entry/SL/TP as colored chips overlaid on the sizer chart. The free
+// TradingView widget can't draw real price lines, so this is a static overlay
+// read off the sizer's szEntry/szSL/szTP fields. Only filled values get a chip;
+// empty → clears the overlay. Values are esc()'d (free-text inputs). Cheap to
+// call even when the chart is hidden.
+function renderChartLevels(){
+  var box=$('chartLevels'); if(!box) return;
+  var defs=[
+    {id:'szEntry',label:'E',cls:'lvl-e'},
+    {id:'szSL',   label:'SL',cls:'lvl-sl'},
+    {id:'szTP',   label:'TP',cls:'lvl-tp'}
+  ];
+  var html='';
+  defs.forEach(function(d){
+    var el=$(d.id); if(!el) return;
+    var v=el.value.trim(); if(!v) return;
+    html+='<span class="lvl '+d.cls+'">'+d.label+' '+esc(v)+'</span>';
+  });
+  box.innerHTML=html;
 }
 
 // Load tv.js; invoke cb(ok). Falls back on error or timeout.
@@ -585,6 +607,7 @@ function renderChartFallback(sym){
 function applyFeed(){
   state.feedOverride=$('feedInput').value.trim().toUpperCase();
   renderChart();
+  renderChartLevels();
 }
 function toggleChart(){
   state.chartOpen=!state.chartOpen;
@@ -593,6 +616,7 @@ function toggleChart(){
   if(state.chartOpen){
     var fi=$('feedInput'); if(fi && !fi.value) fi.value=currentTV();
     renderChart();
+    renderChartLevels();
   }
   saveState();
 }
