@@ -321,32 +321,32 @@ var $ = function(id){ return document.getElementById(id); };
 // quote:'JPY' marks pairs whose cv must be derived from entry (cv = 100000 / price).
 var PRESETS = {
   ftmo:[
-    {s:'EUR/USD',cv:100000,unit:'lots',hint:'1 lot = 100,000 units',tv:'OANDA:EURUSD'},
-    {s:'GBP/USD',cv:100000,unit:'lots',hint:'1 lot = 100,000 units',tv:'OANDA:GBPUSD'},
-    {s:'USD/JPY',cv:100000,unit:'lots',quote:'JPY',hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:USDJPY'},
-    {s:'EUR/GBP',cv:100000,unit:'lots',hint:'1 lot = 100,000 units',tv:'OANDA:EURGBP'},
-    {s:'AUD/USD',cv:100000,unit:'lots',hint:'1 lot = 100,000 units',tv:'OANDA:AUDUSD'},
-    {s:'USD/CAD',cv:100000,unit:'lots',hint:'1 lot = 100,000 units',tv:'OANDA:USDCAD'},
-    {s:'US100 (NDX)',cv:1,unit:'lots',hint:'≈ $1 / point / lot',tv:'OANDA:NAS100USD'},
-    {s:'US500 (SPX)',cv:1,unit:'lots',hint:'≈ $1 / point / lot',tv:'OANDA:SPX500USD'},
-    {s:'XAU/USD',cv:100,unit:'lots',hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD'},
-    {s:'XAG/USD',cv:5000,unit:'lots',hint:'1 lot = 5000 oz → $5000 / $1 move',tv:'OANDA:XAGUSD'},
-    {s:'BTC/USD',cv:1,unit:'lots',hint:'≈ 1 unit per lot',tv:'BITSTAMP:BTCUSD'},
-    {s:'ETH/USD',cv:1,unit:'lots',hint:'≈ 1 unit per lot',tv:'BITSTAMP:ETHUSD'},
-    {s:'Custom…',cv:'',unit:'lots',hint:'enter contract value manually',tv:''}
+    {s:'EUR/USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURUSD'},
+    {s:'GBP/USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:GBPUSD'},
+    {s:'USD/JPY',cv:100000,unit:'lots',step:0.01,quote:'JPY',hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:USDJPY'},
+    {s:'EUR/GBP',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURGBP'},
+    {s:'AUD/USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:AUDUSD'},
+    {s:'USD/CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:USDCAD'},
+    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:NAS100USD'},
+    {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:SPX500USD'},
+    {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD'},
+    {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',tv:'OANDA:XAGUSD'},
+    {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',tv:'BITSTAMP:BTCUSD'},
+    {s:'ETH/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',tv:'BITSTAMP:ETHUSD'},
+    {s:'Custom…',cv:'',unit:'lots',step:0.01,hint:'enter contract value manually',tv:''}
   ],
   breakout:[
-    {s:'BTC',cv:1,unit:'coins',hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:BTCUSD'},
-    {s:'ETH',cv:1,unit:'coins',hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:ETHUSD'},
-    {s:'SOL',cv:1,unit:'coins',hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:SOLUSD'},
-    {s:'XRP',cv:1,unit:'coins',hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:XRPUSD'},
-    {s:'ADA',cv:1,unit:'coins',hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:ADAUSD'},
-    {s:'AVAX',cv:1,unit:'coins',hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:AVAXUSD'},
-    {s:'LINK',cv:1,unit:'coins',hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:LINKUSD'},
-    {s:'DOGE',cv:1,unit:'coins',hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:DOGEUSD'},
-    {s:'Custom…',cv:1,unit:'coins',hint:'perp · size in coins',tv:''}
+    {s:'BTC',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:BTCUSD'},
+    {s:'ETH',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:ETHUSD'},
+    {s:'SOL',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:SOLUSD'},
+    {s:'XRP',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:XRPUSD'},
+    {s:'ADA',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:ADAUSD'},
+    {s:'AVAX',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:AVAXUSD'},
+    {s:'LINK',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:LINKUSD'},
+    {s:'DOGE',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:DOGEUSD'},
+    {s:'Custom…',cv:1,unit:'coins',step:0.001,hint:'perp · size in coins',tv:''}
   ],
-  custom:[{s:'Custom',cv:'',unit:'units',hint:'enter contract value manually',tv:''}]
+  custom:[{s:'Custom',cv:'',unit:'units',step:0.01,hint:'enter contract value manually',tv:''}]
 };
 
 // FX standard lot notional — basis for JPY-quoted cv derivation.
@@ -425,6 +425,18 @@ function currentPreset(){
 
 /* ---------- Sizer ---------- */
 
+// Tradeable volume step for the current instrument (lots/coins).
+// Per-preset assumption (floor-safe, correctable via preset edit). Fallback 0.01.
+function stepFor(){
+  var p=currentPreset();
+  return (p && p.step>0) ? p.step : 0.01;
+}
+// Round the raw sizing volume DOWN to the tradeable step so risk never exceeds target.
+// +1e-9 absorbs IEEE-754 floor error (e.g. 0.29/0.01 = 28.999…); too small to over-size.
+function roundVol(v){ var st=stepFor(); return Math.floor(v/st + 1e-9)*st; }
+// Decimal places of the current step, so the displayed/logged value isn't re-truncated.
+function stepDecimals(){ var st=String(stepFor()); var i=st.indexOf('.'); return i<0?0:st.length-i-1; }
+
 // Resolve the contract value for a preset given the current entry.
 // JPY-quoted pairs derive cv = FX_LOT / entry; everything else is static.
 function contractValueFor(preset, entryStr){
@@ -481,19 +493,24 @@ function renderSize(){
   var r=calcSize();
   var out=$('szOut');
   if(!r){ out.innerHTML='<div style="color:var(--tx3);text-align:center;padding:8px">Enter account, entry, stop &amp; contract value</div>'; return; }
-  // Warnings, in precedence order: invalid size, then wrong-side TP
-  // (no R:R shown), then advisory R:R<1. Wrong-side wins over R:R<1
-  // because rr is null when the TP sits on the wrong side.
+  // Floor the raw volume to the tradeable step before display/transfer; raw
+  // sizing math (calcSize) stays untouched. rv==0 means vol < one step.
+  var rv=roundVol(r.vol), st=stepFor();
+  // Warnings, in precedence order: invalid size, then below-minimum size,
+  // then wrong-side TP (no R:R shown), then advisory R:R<1. Wrong-side wins
+  // over R:R<1 because rr is null when the TP sits on the wrong side.
   var warn = '';
   if(r.vol<=0){
     warn = '<div class="sz-warn">Invalid size — check inputs</div>';
+  } else if(rv<=0){
+    warn = '<div class="sz-warn">Below minimum size (step '+st+') — increase risk or account</div>';
   } else if(r.tpWrongSide){
     warn = '<div class="sz-warn">Take Profit on wrong side for this entry/stop — check direction</div>';
   } else if(r.rr!=null && r.rr<1){
     warn = '<div class="sz-warn soft">R:R below 1 — reward smaller than risk</div>';
   }
   out.innerHTML=
-    '<div class="sz-big"><div><span class="sz-vol">'+fmtVol(r.vol)+'</span><span class="sz-unit">'+unit+'</span></div>'
+    '<div class="sz-big"><div><span class="sz-vol">'+rv.toFixed(stepDecimals())+'</span><span class="sz-unit">'+unit+' · step '+st+'</span></div>'
     +(r.rr?'<div style="text-align:right"><div class="cpl">R:R</div><div class="cbv" style="color:var(--gn);font-size:22px">'+r.rr.toFixed(2)+'R</div></div>':'')+'</div>'
     +'<div class="sz-grid">'
     +'<div class="sz-cell"><div class="cpl">Risk</div><div class="cpv">$'+r.riskAmt.toFixed(0)+'</div></div>'
@@ -628,7 +645,7 @@ function sendToLog(){
   $('slo').value=$('szSL').value;
   $('tpr').value=$('szTP').value;
   $('rsk').value=$('szRisk').value;
-  if(r) $('vol').value=fmtVol(r.vol);
+  if(r) $('vol').value=roundVol(r.vol).toFixed(stepDecimals());
   setTab('log');
   update();
   toast('Sent to Trade Log ✓');
