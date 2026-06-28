@@ -66,16 +66,34 @@ specs; correct them in the `step` field of the relevant `PRESETS` entry if your 
 the risk is too small for one step, the sizer shows a "below minimum size" warning instead of a
 fake-tradeable figure.
 
-## Chart feeds
+## Chart & Entry/SL/TP lines
 
-Default feed follows the selected instrument (FTMO → OANDA feeds, Breakout → Kraken). Override the
-feed for futures (`CME_MINI:NQ1!`, `CME_MINI:ES1!`) or another broker via the feed input, or change
-symbol directly inside the chart. The chart is visual reference only — the broker feed used for real
-levels may differ (e.g. CMC vs OANDA divergence), so always read levels from the platform you execute on.
+The sizer chart draws your **Entry / SL / TP as real horizontal price lines** that move live as you
+type the levels — provided a free candle source exists for the instrument. Which engine is used is
+decided per instrument:
 
-If `tv.js` is blocked by the host's CSP or the network, the chart falls back to the TradingView embed
-iframe, and below it a "Open on TradingView ↗" link as a last resort — so the chart area degrades
-gracefully instead of going blank.
+| Instrument | Engine | Data | Lines? |
+|---|---|---|---|
+| Crypto (Breakout coins + FTMO BTC/ETH) | Lightweight Charts | Kraken public OHLC (no key) | ✅ real lines |
+| FX pairs + metals (XAU/XAG) | Lightweight Charts | Twelve Data (free API key) | ✅ real lines (with key) |
+| Indices (US100/US500), custom, manual feed override | TradingView `tv.js` widget | — | ⬜ level chips only |
+
+Why the split: the embedded TradingView widget is a sealed cross-origin iframe — it has no API to
+draw a line at a price, and we can't map price→pixel inside it. Drawing real lines requires *our own*
+chart engine ([TradingView Lightweight Charts](https://github.com/tradingview/lightweight-charts),
+free, vendored), which needs candle **data**. Free no-key data exists only for crypto (Kraken); FX/metals
+need a data provider key; index OHLC isn't on free tiers, so indices keep the widget + corner chips.
+
+**Twelve Data API key (for FX/metal lines).** Get a free key at
+[twelvedata.com](https://twelvedata.com/pricing) (free tier covers forex + metals; ~800 calls/day is
+ample). Paste it into the chart's **Data API key** field. It is stored **only in your browser**
+(`localStorage` key `quicklog_td_key`) — never committed to the code, never in an exported PNG or the
+"Copy for Sheet" row. The published site ships keyless. Without a key, FX/metals fall back to the
+widget. Indices on the free tier aren't covered (and the ETF proxies trade at a different price scale),
+so US100/US500 stay on the widget regardless.
+
+Any failure (data source blocked by CORS, unsupported symbol, bad/expired key, lib load fails) degrades
+gracefully to the TradingView widget + chips — never a blank chart.
 
 ## Persistence
 

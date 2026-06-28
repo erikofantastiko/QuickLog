@@ -22,6 +22,10 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
 - **Persistenz** — alle Inputs + UI-State in `localStorage['quicklog']`, Restore beim Laden.
 - **PNG → Zwischenablage** — „PNG for X" kopiert das Karten-PNG direkt in die Clipboard
   (`ClipboardItem`, Safari-tauglich), Datei-Download als Fallback. Loop-Verdict APPROVE.
+- **Echte Chart-Linien (calc.trade-Stil)** — Entry/SL/TP als echte Preislinien via Lightweight
+  Charts: Krypto über Kraken-OHLC (kein Key), FX/Metalle über Twelve Data (User-Key nur in
+  localStorage `quicklog_td_key`). Indizes/Override → TV-Widget + Chips. Linien wandern live beim
+  Tippen; jeder Fehler ⇒ Widget-Fallback. Auf `loop/p0-pwa`, Verifier APPROVE.
 
 ## Backlog (priorisiert)
 

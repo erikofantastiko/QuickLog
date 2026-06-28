@@ -13,7 +13,11 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
 - **[styles.css](styles.css)** — beide vormals inline `<style>`-Blöcke, 1:1.
 - **[README.md](README.md)** — Nutzer-Doku (Contract-Value-Quellen, Sheet-Mapping, Hosting).
 - `html2canvas` ist lokal gevendort (`vendor/html2canvas.min.js`, 1.4.1) → PNG-Export offline.
-  TradingView `tv.js` wird weiter dynamisch vom CDN geladen (optionaler Chart, online-only).
+- **Chart-Engine (per Instrument):** Krypto (Kraken-OHLC) und FX/Metalle (Twelve Data) zeichnen echte
+  Entry/SL/TP-Preislinien via **Lightweight Charts** (gevendort, `vendor/lightweight-charts...`).
+  Indizes/Override/Custom bleiben beim TradingView-`tv.js`-Widget (kein Linien-API, keine freie
+  Index-Datenquelle) + Chips-Overlay. Dispatch in `app.js`: `cryptoKrakenPair` → Kraken, sonst
+  `twelveDataSymbol` + Key → TD, sonst Widget. Jeder Fehler (CORS/Symbol/Key) ⇒ Widget-Fallback.
 - **PWA-Dateien:** `manifest.webmanifest`, `sw.js` (App-Shell-Precache `quicklog-v1`,
   stale-while-revalidate für same-origin, cross-origin durchgereicht), `icons/` (icon.svg +
   192/512/apple-touch PNG). Installierbar + Kern offline.
@@ -30,6 +34,9 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   (Market Watch → Specification). Jedes Instrument hat einen manuellen Override.
 - **Broker-Modelle:** FTMO = MT5 CFD, Sizing in Lots. Breakout = Crypto-Perps, Sizing in Coins
   (`coins = Risk$ / |Entry − SL|`, cv = 1), Kraken-Feeds.
+- **TD-API-Key nur in localStorage** (`quicklog_td_key`) — NIE im Code, PNG, Sheet, `quicklog`-Blob
+  oder der Trade-History. `#tdKey` ist `type=password` und steht NICHT in `PERSISTED_FIELDS`. Die
+  veröffentlichte Seite ist keyless.
 
 ## Testen
 
