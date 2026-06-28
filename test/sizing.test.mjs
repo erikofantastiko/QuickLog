@@ -97,6 +97,9 @@ const pieces = [
   extractFn('roundVol'),
   extractFn('stepDecimals'),
   extractFn('getAccount'),
+  // getSizerRisk feeds calcSize (preset select vs. 'custom' free-text field);
+  // it MUST be extracted or calcSize throws ReferenceError when evaluated.
+  extractFn('getSizerRisk'),
   extractFn('calcSize')
 ];
 
@@ -108,7 +111,7 @@ const $ = (id) => ({ value: id in fields ? fields[id] : '' });
 
 const factory = new Function('$', 'fields', `
   ${pieces.join('\n')}
-  return { PRESETS, FX_LOT, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, stepFor, roundVol, stepDecimals, getAccount, calcSize };
+  return { PRESETS, FX_LOT, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize };
 `);
 const M = factory($, fields);
 
@@ -163,6 +166,20 @@ let r = M.calcSize();
 ok(r !== null, 'calcSize EUR/USD case returns a result');
 approx(r.riskAmt, 250, 1e-9, 'EUR/USD riskAmt == 250');
 approx(r.vol, 0.8333, 0.0005, 'EUR/USD vol ~= 0.8333');
+// non-custom select feeds getSizerRisk verbatim (0.25), so riskAmt stayed 250 above.
+eq(M.getSizerRisk(), 0.25, 'getSizerRisk() reads the preset select value (0.25)');
+
+// 3b. Custom risk path: szRisk='custom' => getSizerRisk reads szRiskCustom (0.33),
+//     so riskAmt = 100000 * 0.0033 = 330 and vol scales accordingly (same levels).
+setFields({
+  accPreset: '100000', szRisk: 'custom', szRiskCustom: '0.33',
+  szEntry: '1.08500', szSL: '1.08200', szTP: '', cv: '100000'
+});
+eq(M.getSizerRisk(), 0.33, 'getSizerRisk() reads szRiskCustom when szRisk==custom (0.33)');
+r = M.calcSize();
+ok(r !== null, 'calcSize custom-risk case returns a result');
+approx(r.riskAmt, 330, 1e-9, 'custom-risk riskAmt == 100000*0.0033 == 330');
+approx(r.vol, 1.1, 0.001, 'custom-risk vol ~= 1.1 (330 / (0.003*100000))');
 
 //    JPY 150.000 -> 149.000, cv = contractValueFor(USD/JPY,"150") => vol ~= 0.375.
 const jpyCv = M.contractValueFor(USDJPY, '150');
