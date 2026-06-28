@@ -116,6 +116,12 @@
       <label>Twelve Data API key <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(FX / metals — real lines · stored locally only · <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener" style="color:var(--tx3)">free key</a>)</span></label>
       <input type="password" id="tdKey" placeholder="Twelve Data API key (FX/Metalle)" autocomplete="off" style="font-family:var(--mn);font-size:14px">
     </div>
+    <div id="chartTf" style="display:none;gap:6px;margin-bottom:10px">
+      <button class="tf" data-tf="15m">15m</button>
+      <button class="tf" data-tf="1h">1h</button>
+      <button class="tf" data-tf="4h">4h</button>
+      <button class="tf" data-tf="1d">1d</button>
+    </div>
     <div style="position:relative">
       <div id="tvChart" style="height:360px;border-radius:12px;overflow:hidden;border:1px solid var(--bd)"></div>
       <div id="chartLevels"></div>

@@ -76,6 +76,7 @@ var state = {
   feedOverride:'',
   cvManual:false,     // true once the user types into the Contract Value field
   dirManual:false,    // true once the user clicks Long/Short; auto-detect from entry vs SL until then
+  chartInterval:'1h', // LWC timeframe ('15m'|'1h'|'4h'|'1d'); maps to Kraken minutes / TD strings
   lwc:null            // active Lightweight Charts crypto chart {chart,series,lines:[],resize} or null
 };
 
@@ -591,6 +592,19 @@ function loadTVScript(cb){
   document.body.appendChild(s);
 }
 
+// Show/hide the LWC timeframe button row and, when shown, mark the active
+// button from state.chartInterval. The TV widget has its own timeframes, so the
+// row is hidden on the widget path. Cheap; safe if #chartTf is absent.
+function setChartTf(visible){
+  var box=$('chartTf'); if(!box) return;
+  box.style.display=visible?'flex':'none';
+  if(!visible) return;
+  var btns=box.querySelectorAll('.tf');
+  for(var i=0;i<btns.length;i++){
+    btns[i].className='tf'+(btns[i].getAttribute('data-tf')===state.chartInterval?' on':'');
+  }
+}
+
 function renderChart(){
   // Dispatch, in priority order:
   //   a) Crypto with NO manual override → Lightweight Charts + Kraken candles.
@@ -598,15 +612,17 @@ function renderChart(){
   //   c) Everything else (indices, FX-without-key, override, custom) →
   //      existing TradingView widget + chips path.
   // A manual feed override is a deliberate power-user choice → always TV widget.
+  // The LWC timeframe row (#chartTf) shows only on the two LWC branches (a/b).
   var p=currentPreset();
   var krakenPair = state.feedOverride ? null : cryptoKrakenPair(p ? p.s : '');
-  if(krakenPair){ renderCryptoChart(krakenPair); return; }
+  if(krakenPair){ setChartTf(true); renderCryptoChart(krakenPair); return; }
 
   var tdSym = state.feedOverride ? null : twelveDataSymbol(p ? p.s : '');
-  if(tdSym && tdKey()){ destroyCryptoChart(); renderTwelveDataChart(tdSym); return; }
+  if(tdSym && tdKey()){ setChartTf(true); destroyCryptoChart(); renderTwelveDataChart(tdSym); return; }
 
   // Non-crypto (or overridden): existing TradingView widget + chips path,
   // unchanged. Tear down any live crypto chart first so we don't leak/double.
+  setChartTf(false);
   destroyCryptoChart();
   var sym=state.feedOverride||currentTV();
   var el=$('tvChart');
@@ -760,11 +776,16 @@ function renderLWCChart(displaySym, fetchFn){
   });
 }
 
-// Fetch 1h OHLC from Kraken for `sym` (request pair) and normalise to the
-// LWC candle shape. Throws on HTTP error / Kraken error envelope / empty
-// result so renderLWCChart falls back to the TV widget + chips.
+// Kraken OHLC `interval` is in MINUTES → map the UI timeframe to Kraken's
+// candle granularity. tdFetch uses TD_INTERVAL (string codes) instead.
+var KRAKEN_INTERVAL={'15m':15,'1h':60,'4h':240,'1d':1440};
+
+// Fetch OHLC (timeframe from state.chartInterval) from Kraken for `sym`
+// (request pair) and normalise to the LWC candle shape. Throws on HTTP error /
+// Kraken error envelope / empty result so renderLWCChart falls back to the TV
+// widget + chips.
 function krakenFetch(sym){
-  return fetch('https://api.kraken.com/0/public/OHLC?pair='+sym+'&interval=60')
+  return fetch('https://api.kraken.com/0/public/OHLC?pair='+sym+'&interval='+(KRAKEN_INTERVAL[state.chartInterval]||60))
     .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
     .then(function(json){
       // Kraken error envelope: { error:[...], result:{ <canonicalPair>:[[t,o,h,l,c,vwap,vol,cnt]...], last } }.
@@ -819,12 +840,17 @@ function twelveDataSymbol(presetSymbol){
     ? TWELVE_DATA_SYMBOLS[presetSymbol] : null;
 }
 
-// Fetch 1h OHLC from Twelve Data for `sym` and normalise to the LWC candle
-// shape (time in seconds, ascending). Throws on TD error status / missing
-// values so renderLWCChart falls back to the TV widget + chips.
+// Twelve Data `interval` takes string codes ('15min','1h','4h','1day') → map
+// the UI timeframe to them. krakenFetch uses KRAKEN_INTERVAL (minutes) instead.
+var TD_INTERVAL={'15m':'15min','1h':'1h','4h':'4h','1d':'1day'};
+
+// Fetch OHLC (timeframe from state.chartInterval) from Twelve Data for `sym`
+// and normalise to the LWC candle shape (time in seconds, ascending). Throws on
+// TD error status / missing values so renderLWCChart falls back to the TV
+// widget + chips.
 function tdFetch(sym){
   return fetch('https://api.twelvedata.com/time_series?symbol='+encodeURIComponent(sym)
-      +'&interval=1h&outputsize=300&apikey='+encodeURIComponent(tdKey()))
+      +'&interval='+(TD_INTERVAL[state.chartInterval]||'1h')+'&outputsize=300&apikey='+encodeURIComponent(tdKey()))
     .then(function(res){ return res.json(); })
     .then(function(json){
       // TD error envelope: { status:'error', code, message }. Free-tier limits /
@@ -885,6 +911,24 @@ function applyFeed(){
   renderChart();
   renderChartLevels();
 }
+
+// Switch the LWC chart timeframe. Updates state + the active button, persists,
+// and — only when an LWC chart is live — re-dispatches renderChart so the chart
+// is refetched at the new interval (destroyCryptoChart tears down the old one).
+// On the TV-widget path there is no LWC chart, so nothing refetches.
+function setChartInterval(tf){
+  if(!KRAKEN_INTERVAL[tf]) return; // ignore unknown timeframe codes
+  state.chartInterval=tf;
+  var box=$('chartTf');
+  if(box){
+    var btns=box.querySelectorAll('.tf');
+    for(var i=0;i<btns.length;i++){
+      btns[i].className='tf'+(btns[i].getAttribute('data-tf')===tf?' on':'');
+    }
+  }
+  saveState();
+  if(state.lwc) renderChart();
+}
 function toggleChart(){
   state.chartOpen=!state.chartOpen;
   $('chartWrap').style.display=state.chartOpen?'block':'none';
@@ -910,7 +954,8 @@ function saveState(){
       state:{
         direction:state.direction, mode:state.mode, tab:state.tab,
         chartOpen:state.chartOpen, feedOverride:state.feedOverride,
-        cvManual:state.cvManual, dirManual:state.dirManual
+        cvManual:state.cvManual, dirManual:state.dirManual,
+        chartInterval:state.chartInterval
       }
     }));
   }catch(e){ /* storage unavailable / quota — non-fatal */ }
@@ -941,6 +986,9 @@ function loadState(){
   var s=data.state||{};
   if(s.cvManual!=null) state.cvManual=!!s.cvManual;
   if(s.feedOverride!=null) state.feedOverride=s.feedOverride;
+  // Restore the LWC timeframe BEFORE the chartOpen renderChart() below so the
+  // first chart loads at the saved interval and the active .tf button matches.
+  if(s.chartInterval) state.chartInterval=s.chartInterval;
   // Restore direction visually without pinning, then apply the saved pin flag
   // so dirManual ends up exactly as persisted.
   if(s.direction) setDirection(s.direction, false);
@@ -1109,6 +1157,13 @@ function bind(){
   on('szSL','input',update);
   on('szTP','input',update);
   on('chartToggle','click',toggleChart);
+  // LWC timeframe row: delegated click (no inline on*), reads data-tf.
+  on('chartTf','click',function(e){
+    var b=e.target.closest ? e.target.closest('.tf') : null;
+    if(!b) return;
+    var tf=b.getAttribute('data-tf');
+    if(tf) setChartInterval(tf);
+  });
   on('feedLoad','click',applyFeed);
   // Twelve Data key: localStorage-only (never in the 'quicklog' blob). Persist
   // on every keystroke, then re-render so the chart upgrades to real lines the
