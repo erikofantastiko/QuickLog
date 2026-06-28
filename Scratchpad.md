@@ -67,7 +67,12 @@ unverändert.
 ### P3 — Politur  ·  Status: teilweise  ·  Aufwand: S
 - ✅ JPY-Crosses (EUR/JPY, GBP/JPY) in die Presets — merged → main (620f345).
 - ✅ Custom-Risk-Feld (Sizer + Log) — merged → main (361391b); Test 20→25.
-- ⬜ Sizer-Karte ebenfalls als PNG/Copy exportierbar.
+- ✅ Sizer-Karte als PNG/Copy — merged → main (89d1755); shared `exportNodePng`-Helper.
+
+### P3 — Preisfelder escapen (entry/sl/tp)  ·  Status: offen  ·  Aufwand: S
+**Warum:** `cardHtml` UND `sizerCardHtml` rendern `entry`/`sl`/`tp` ungeescaped via `innerHTML`
+(`cell()`). P1 escapte bewusst nur asset/note. Self-XSS/Render-Bruch bei `<`/`&` in einem Preisfeld.
+**How:** `esc()` auf die Preisfelder in BEIDEN Karten gemeinsam anwenden (vom Verifier in p3-sizer-png notiert).
 
 ### P3 — Tests für die Geld-Mathematik  ·  Status: ✅ merged → main (cf5148b)  ·  Aufwand: S
 **Warum:** `contractValueFor`/`calcSize` dürfen nie still regredieren. Kleines `test.mjs`, das sie
