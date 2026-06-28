@@ -1,0 +1,16 @@
+# Normalize line endings for text source so the repo is deterministic across
+# machines (autocrlf differences won't show up as spurious diffs).
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+*.mjs   text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.webmanifest text eol=lf
+*.svg   text eol=lf
+
+# Vendored minified bundle: keep byte-for-byte, never touch its line endings.
+vendor/** binary
+
+# Raster icons are binary.
+*.png   binary

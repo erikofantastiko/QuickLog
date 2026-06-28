@@ -1,7 +1,8 @@
 # QuickLog
 
-Single-file trade logging and position sizing tool for prop firm trading (FTMO + Breakout).
-ICT/FX and crypto. No backend, no dependencies beyond two CDN scripts. Runs as a static page.
+Installable, offline-capable trade logging and position sizing tool for prop firm trading
+(FTMO + Breakout). ICT/FX and crypto. No backend, no build step, no runtime CDN dependency for the
+core — runs as a static page / installable PWA.
 
 ## What it does
 
@@ -19,9 +20,16 @@ card as an image via html2canvas).
 
 ## Hosting
 
-Drop `index.html` into any static host (GitHub Pages, Cloudflare Pages). Must be served over HTTPS
-for clipboard and PNG download to work without fallbacks. On mobile, "Add to Home Screen" makes it
-behave like an app (dark status bar, full-screen).
+Drop the whole folder (`index.html`, `app.js`, `styles.css`, `manifest.webmanifest`, `sw.js`,
+`vendor/`, `icons/`) onto any static host (GitHub Pages, Cloudflare Pages) — all paths are relative so
+it works under a subpath like `/QuickLog/`. Serve over HTTPS so the clipboard, PNG export and the
+service worker register without fallbacks. On mobile, "Install" / "Add to Home Screen" makes it behave
+like a native app (dark status bar, full-screen, launches offline). Opening `index.html` via `file://`
+also still works — the service worker is skipped there.
+
+The service worker (`sw.js`) precaches the app shell (`quicklog-v1`) so the core (Sizer + Log + PNG)
+loads and runs offline. The TradingView chart and any price feeds stay online-only (cross-origin
+requests are passed straight through and never cached).
 
 ## Contract values — IMPORTANT
 
@@ -93,7 +101,10 @@ the sheet — the mapping assumes it is gone.
 
 ## Stack
 
-- Plain HTML/CSS/JS, no framework
-- `html2canvas` (CDN) for PNG export
-- TradingView `tv.js` widget (CDN) for the optional chart
+- Plain HTML/CSS/JS, no framework, no build step — `index.html` (markup) + `app.js` (one classic IIFE,
+  not an ES module, so `file://` keeps working) + `styles.css`
+- Installable PWA: `manifest.webmanifest` + `sw.js` (app-shell precache, stale-while-revalidate for
+  same-origin, network-only passthrough for chart/feeds) + `icons/`
+- `html2canvas` vendored locally (`vendor/html2canvas.min.js`) for offline PNG export
+- TradingView `tv.js` widget (CDN, loaded on demand) for the optional chart — online-only
 - Clipboard API with `execCommand` fallback

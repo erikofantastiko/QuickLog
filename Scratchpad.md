@@ -4,6 +4,13 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
 
 ## Changelog (erledigt)
 
+- **PWA / Offline-Umstellung** — Single-File `index.html` in Markup + `styles.css` + `app.js`
+  (klassische IIFE) gesplittet; `html2canvas` 1.4.1 lokal gevendort (`vendor/`); `manifest.webmanifest`,
+  `sw.js` (App-Shell-Precache `quicklog-v1`, stale-while-revalidate same-origin, cross-origin
+  durchgereicht — Chart/Feeds nie gecacht), Icons (192/512/apple-touch + `icon.svg`). SW-Registrierung
+  `file://`-guarded. Test auf `app.js` migriert, PASS 25/25 + Mutationsbeleg. Alle Pfade relativ.
+  JS/CSS/`copyForSheet`/`SHEET_COLUMNS`/Sizing 1:1 unverändert.
+
 - **JPY-Sizing-Fix** — JPY-quotierte Paare wurden ~150× zu klein gesized (cv hart 100000 statt
   `100000 / price`). Jetzt aus Entry abgeleitet, Feld editierbar (manueller Override), ohne Entry
   kein Ergebnis. Non-JPY unverändert. Gegen T66/67/68 + USD/JPY 150→149 verifiziert.
@@ -18,7 +25,7 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
 
 ## Backlog (priorisiert)
 
-### P0 — PWA / Offline-Umstellung  ·  Status: entschieden, geplant  ·  Aufwand: M
+### P0 — PWA / Offline-Umstellung  ·  Status: ✅ umgesetzt (Branch loop/p0-pwa, Verifier ausstehend)  ·  Aufwand: M
 **Warum:** Installierbar am Homescreen, sofortiger Load, Kern (Sizer + Log + PNG) läuft offline /
 CDN-unabhängig. Ein Service Worker kann nicht inline sein → erzwingt Multi-File (= einziger echter
 Grund, Single-File aufzugeben).

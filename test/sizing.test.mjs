@@ -1,9 +1,9 @@
 // QuickLog — money-math regression tests (framework-free, no npm deps).
 //
-// WHY this shape: the sizing functions live inside one IIFE in index.html and are
+// WHY this shape: the sizing functions live inside one IIFE in app.js and are
 // not exported. To avoid testing a stale hardcoded *copy* of the math (which would
 // not regress when the source changes), this script EXTRACTS the relevant source
-// text straight out of index.html and evaluates it in a sandbox. If someone edits
+// text straight out of app.js and evaluates it in a sandbox. If someone edits
 // e.g. the `vol = riskAmt/(dist*cv)` line or a preset cv, these tests see the new
 // definition and (correctly) fail if it broke a known value.
 //
@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC = readFileSync(join(__dirname, '..', 'index.html'), 'utf8');
+const SRC = readFileSync(join(__dirname, '..', 'app.js'), 'utf8');
 
 /* ---------- extraction helpers ---------- */
 
