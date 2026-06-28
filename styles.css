@@ -92,8 +92,9 @@
 .tl .tr-m{flex:1;min-width:0;font-size:12px;color:var(--tx2);font-family:var(--mn);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tl .tr-x{flex-shrink:0;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx2);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sn)}
 .tl .tr-x:hover{border-color:var(--tx2);color:var(--tx)}
-.tl #chartLevels{position:absolute;top:8px;left:8px;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none;z-index:5}
-.tl .lvl{font-family:var(--mn);font-size:var(--fs-2xs);font-weight:600;padding:3px 8px;border-radius:6px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.tl #chartLevels{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tl #chartLevels:empty{display:none}
+.tl .lvl{font-family:var(--mn);font-size:var(--fs-2xs);font-weight:600;padding:3px 8px;border-radius:6px}
 .tl .lvl-e{background:rgba(20,20,23,.8);color:var(--tx);border:1px solid var(--bd)}
 .tl .lvl-sl{background:var(--rdbg);color:var(--rd)}
 .tl .lvl-tp{background:var(--gnbg);color:var(--gn)}
