@@ -590,16 +590,32 @@ function exportPng(){
   var d=readCard();
   tmp.innerHTML='<div style="background:#151517;border:1px solid #2a2a2e;border-radius:12px;padding:20px">'+cardHtml(d)+'</div>';
   document.body.appendChild(tmp);
-  html2canvas(tmp,{backgroundColor:'#0c0c0e',scale:2,useCORS:true,logging:false}).then(function(c){
-    document.body.removeChild(tmp);
-    var l=document.createElement('a');
-    l.download=(d.asset!=='—'?d.asset:'trade').replace(/\//g,'-')+'_'+today().replace(/\//g,'-')+'.png';
-    l.href=c.toDataURL('image/png'); l.click();
-    b.textContent='PNG for X'; b.style.pointerEvents='auto'; toast('PNG saved ✓');
-  }).catch(function(e){
-    document.body.removeChild(tmp);
-    b.textContent='PNG for X'; b.style.pointerEvents='auto'; toast('Error: '+e.message);
-  });
+
+  function filename(){ return (d.asset!=='—'?d.asset:'trade').replace(/\//g,'-')+'_'+today().replace(/\//g,'-')+'.png'; }
+  function restore(){ b.textContent='PNG for X'; b.style.pointerEvents='auto'; }
+  function downloadBlob(bl){ var url=URL.createObjectURL(bl); var l=document.createElement('a'); l.download=filename(); l.href=url; l.click(); URL.revokeObjectURL(url); restore(); toast('PNG saved ✓'); }
+
+  var canClip=navigator.clipboard && window.ClipboardItem && window.isSecureContext;
+
+  if(canClip){
+    // Safari requires the ClipboardItem to be constructed synchronously in the
+    // click handler with a Promise of the blob — do NOT await then write.
+    var blobPromise=html2canvas(tmp,{backgroundColor:'#0c0c0e',scale:2,useCORS:true,logging:false})
+      .then(function(c){ if(tmp.parentNode) document.body.removeChild(tmp); return new Promise(function(res){ c.toBlob(function(bl){res(bl);}, 'image/png'); }); });
+    navigator.clipboard.write([new ClipboardItem({'image/png': blobPromise})])
+      .then(function(){ restore(); toast('Bild kopiert — in X einfügen ✓'); })
+      .catch(function(){
+        blobPromise.then(function(bl){ if(!bl){ restore(); toast('Copy failed'); return; } downloadBlob(bl); })
+          .catch(function(e){ if(tmp.parentNode) document.body.removeChild(tmp); restore(); toast('Error: '+e.message); });
+      });
+  } else {
+    html2canvas(tmp,{backgroundColor:'#0c0c0e',scale:2,useCORS:true,logging:false}).then(function(c){
+      if(tmp.parentNode) document.body.removeChild(tmp);
+      c.toBlob(function(bl){ if(!bl){ restore(); toast('Copy failed'); return; } downloadBlob(bl); }, 'image/png');
+    }).catch(function(e){
+      if(tmp.parentNode) document.body.removeChild(tmp); restore(); toast('Error: '+e.message);
+    });
+  }
 }
 
 // Transfer the Sizer result into the Trade Log fields.
