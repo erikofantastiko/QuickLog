@@ -30,8 +30,10 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
 ## Testen
 
 - Schnelle Syntaxprüfung: Script aus `index.html` extrahieren und `node --check` darüber laufen lassen.
-- Geld-Mathematik (`contractValueFor`/`calcSize`) per kleinem Node-Snippet gegen bekannte Trades
-  (T66/67/68 + JPY) gegenprüfen, bevor man der Anzeige traut.
+- Geld-Mathematik: `node test/sizing.test.mjs` — 20 Assertions (SHEET_COLUMNS 23/28, `contractValueFor`
+  JPY/non-JPY, `FX_LOT` exakt gepinnt, Sizing EUR/USD 0.8333 & JPY 0.375, `roundVol`-Edges). Liest die
+  Formeln/Werte aus `index.html` (kein hartkodiertes Replikat) → regrediert bei gebrochener Mathematik.
+  Bei `const`/Arrow/PWA-Split bricht die Extraktion laut (Testfehler, nie still grün).
 - Voller Test: lokal servieren (`npx serve` / `python -m http.server`) und im Browser durchklicken.
   Persistenz: ausfüllen → reload → Felder bleiben.
 

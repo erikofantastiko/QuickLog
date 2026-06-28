@@ -69,7 +69,7 @@ unverändert.
 - Custom-Risk-Feld analog zur Account-Size.
 - Sizer-Karte ebenfalls als PNG/Copy exportierbar.
 
-### P3 — Tests für die Geld-Mathematik  ·  Status: offen  ·  Aufwand: S
+### P3 — Tests für die Geld-Mathematik  ·  Status: ✅ merged → main (cf5148b)  ·  Aufwand: S
 **Warum:** `contractValueFor`/`calcSize` dürfen nie still regredieren. Kleines `test.mjs`, das sie
 importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Framework.
 
