@@ -377,7 +377,8 @@ var state = {
   tab:'size',         // 'size' | 'log'
   chartOpen:false,
   feedOverride:'',
-  cvManual:false      // true once the user types into the Contract Value field
+  cvManual:false,     // true once the user types into the Contract Value field
+  dirManual:false     // true once the user clicks Long/Short; auto-detect from entry vs SL until then
 };
 
 /* ---------- Utils ---------- */
@@ -650,11 +651,25 @@ function setMode(m){
   $('btf').style.display=m==='backtest'?'block':'none';
   saveState();
 }
-function setDirection(d){
+function setDirection(d, manual){
+  if(manual===true) state.dirManual=true;
   state.direction=d;
   $('blo').className='db'+(d==='Long'?' lo':'');
   $('bsh').className='db'+(d==='Short'?' so':'');
   update();
+}
+
+// Derive Long/Short from entry vs SL unless the user has pinned a choice.
+// Entry > SL => Long, Entry < SL => Short. Entry == SL or invalid: leave as-is.
+// Does NOT touch dirManual and does NOT call update() — the caller updates.
+function maybeAutoDirection(){
+  if(state.dirManual) return;
+  var e=parseNum($('ent').value), s=parseNum($('slo').value);
+  if(isNaN(e)||isNaN(s)||e===s) return;
+  var d=e>s?'Long':'Short';
+  state.direction=d;
+  $('blo').className='db'+(d==='Long'?' lo':'');
+  $('bsh').className='db'+(d==='Short'?' so':'');
 }
 
 function fillInstruments(){
@@ -777,7 +792,8 @@ function saveState(){
       v:1, fields:fields,
       state:{
         direction:state.direction, mode:state.mode, tab:state.tab,
-        chartOpen:state.chartOpen, feedOverride:state.feedOverride, cvManual:state.cvManual
+        chartOpen:state.chartOpen, feedOverride:state.feedOverride,
+        cvManual:state.cvManual, dirManual:state.dirManual
       }
     }));
   }catch(e){ /* storage unavailable / quota — non-fatal */ }
@@ -808,7 +824,10 @@ function loadState(){
   var s=data.state||{};
   if(s.cvManual!=null) state.cvManual=!!s.cvManual;
   if(s.feedOverride!=null) state.feedOverride=s.feedOverride;
-  if(s.direction) setDirection(s.direction);
+  // Restore direction visually without pinning, then apply the saved pin flag
+  // so dirManual ends up exactly as persisted.
+  if(s.direction) setDirection(s.direction, false);
+  state.dirManual = !!s.dirManual;
   if(s.mode) setMode(s.mode);
   if(s.tab) setTab(s.tab);
   $('accCustomWrap').style.display=$('accPreset').value==='custom'?'block':'none';
@@ -851,13 +870,13 @@ function bind(){
   on('bb','click',function(){ setMode('backtest'); });
   on('btId','input',update);
   on('pl','input',update);
-  on('ast','input',function(){ this.value=this.value.toUpperCase(); update(); });
-  on('blo','click',function(){ setDirection('Long'); });
-  on('bsh','click',function(){ setDirection('Short'); });
+  on('ast','input',function(){ this.value=this.value.toUpperCase(); state.dirManual=false; update(); });
+  on('blo','click',function(){ setDirection('Long', true); });
+  on('bsh','click',function(){ setDirection('Short', true); });
   on('ses','change',update);
   on('rsk','change',update);
-  on('ent','input',update);
-  on('slo','input',update);
+  on('ent','input',function(){ maybeAutoDirection(); update(); });
+  on('slo','input',function(){ maybeAutoDirection(); update(); });
   on('tpr','input',update);
   on('vol','input',update);
   on('stp','change',update);
