@@ -202,6 +202,7 @@
 
   <div class="ar">
     <button class="bt bp" id="toLogBtn">Send to Trade Log →</button>
+    <button class="bt" id="szExb">Copy Sizer PNG</button>
   </div>
 </div>
 
@@ -602,6 +603,70 @@ function cardHtml(d){
     +(d.note?'<div style="margin-top:12px;padding:10px 12px;background:#0c0c0e;border-radius:8px;font-size:13px;color:#8a8a90;font-style:italic">'+esc(d.note)+'</div>':'');
 }
 
+/* ---------- Sizer card (PNG export) ---------- */
+
+// Read the Sizer fields + calcSize() result into a plain data object for the
+// PNG card. Returns null when inputs are incomplete (calcSize null) so the
+// export can bail with a hint instead of rendering an empty image.
+function readSizer(){
+  var r=calcSize();
+  if(!r) return null;
+  var p=currentPreset();
+  var brkEl=$('brk'), brkLabel=(brkEl && brkEl.selectedIndex>=0) ? brkEl.options[brkEl.selectedIndex].text : brkEl.value;
+  var e=parseNum($('szEntry').value), s=parseNum($('szSL').value);
+  return {
+    instrument: $('inst').value||'—',
+    broker:     brkLabel,
+    account:    getAccount(),
+    risk:       getSizerRisk(),
+    entry:      $('szEntry').value||'—',
+    sl:         $('szSL').value||'—',
+    tp:         $('szTP').value||'—',
+    vol:        roundVol(r.vol).toFixed(stepDecimals()),
+    unit:       p?p.unit:'lots',
+    rr:         r.rr,
+    riskAmt:    r.riskAmt,
+    isLong:     e>s,
+    date:       today()
+  };
+}
+
+// Inline-styled sizer card (no CSS-var dependency), same dark idiom as
+// cardHtml, so it renders identically in the detached html2canvas node.
+// Instrument/broker come from the preset selects → already safe; routed
+// through esc() defensively in case a free-text value ever flows in.
+function sizerCardHtml(d){
+  var rrColor = d.rr!=null ? (d.isLong?'#3ecf8e':'#e5484d') : '#56565c';
+  var badgeBg = d.isLong?'rgba(62,207,142,.12)':'rgba(229,72,77,.12)';
+  var badgeFg = d.isLong?'#3ecf8e':'#e5484d';
+  var badgeTx = d.isLong?'↑ Long':'↓ Short';
+  function cell(label,val){
+    return '<div style="background:#0c0c0e;border-radius:8px;padding:10px 12px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">'+label+'</div><div style="font-size:14px;font-weight:600;font-family:monospace;color:#e4e4e7">'+val+'</div></div>';
+  }
+  function big(label,val,color){
+    return '<div style="background:#0c0c0e;border-radius:8px;padding:12px 14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">'+label+'</div><div style="font-size:24px;font-weight:600;font-family:monospace;color:'+color+'">'+val+'</div></div>';
+  }
+  return '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">'
+    +'<div><div style="font-size:24px;font-weight:600;color:#e4e4e7">'+esc(d.instrument)+'</div><div style="font-size:13px;color:#8a8a90;margin-top:4px">'+esc(d.broker)+' · $'+d.account.toLocaleString('en-US')+' · '+d.risk+'%</div></div>'
+    +'<div style="text-align:right"><span style="display:inline-block;padding:4px 12px;border-radius:10px;font-size:13px;font-weight:600;background:'+badgeBg+';color:'+badgeFg+'">'+badgeTx+'</span><div style="font-size:11px;color:#56565c;margin-top:6px">'+d.date+'</div></div></div>'
+    +'<div style="background:#0c0c0e;border-radius:8px;padding:14px 16px;margin-bottom:14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">Position size</div><div style="font-size:32px;font-weight:700;font-family:monospace;color:#e4e4e7">'+d.vol+'<span style="font-size:15px;font-weight:600;color:#8a8a90;margin-left:8px">'+d.unit+'</span></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'+cell('Entry',d.entry)+cell('Stop loss',d.sl)+cell('Take profit',d.tp)+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+big('R:R',d.rr!=null?d.rr.toFixed(2)+'R':'—',rrColor)+big('Risk',' $'+d.riskAmt.toFixed(0),'#e4e4e7')+'</div>';
+}
+
+// Export the sizer result as a PNG via the shared exportNodePng helper.
+// Bails with a hint toast when inputs are incomplete (no empty image).
+function exportSizerPng(){
+  var b=$('szExb');
+  var d=readSizer();
+  if(!d){ toast('Enter sizer inputs first'); return; }
+  b.textContent='Rendering...'; b.style.pointerEvents='none';
+  var tmp=document.createElement('div');
+  tmp.style.cssText='position:absolute;left:-9999px;top:0;width:520px;padding:24px;background:#0c0c0e;border-radius:12px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;color:#e4e4e7;font-size:15px;line-height:1.5';
+  tmp.innerHTML='<div style="background:#151517;border:1px solid #2a2a2e;border-radius:12px;padding:20px">'+sizerCardHtml(d)+'</div>';
+  exportNodePng(tmp, (d.instrument!=='—'?d.instrument:'sizer'), b, 'Copy Sizer PNG');
+}
+
 /* ---------- Log actions ---------- */
 
 function copyForSheet(){
@@ -629,17 +694,18 @@ function copyForSheet(){
   copyText(row.join('\t'));
 }
 
-function exportPng(){
-  var b=$('exb');
-  b.textContent='Rendering...'; b.style.pointerEvents='none';
-  var tmp=document.createElement('div');
-  tmp.style.cssText='position:absolute;left:-9999px;top:0;width:520px;padding:24px;background:#0c0c0e;border-radius:12px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;color:#e4e4e7;font-size:15px;line-height:1.5';
-  var d=readCard();
-  tmp.innerHTML='<div style="background:#151517;border:1px solid #2a2a2e;border-radius:12px;padding:20px">'+cardHtml(d)+'</div>';
+// Shared html2canvas → clipboard-or-download core. Renders the detached node
+// `tmp` (already styled by the caller), copies the PNG via ClipboardItem with
+// the synchronous Promise pattern Safari needs, or downloads it as a fallback.
+// `tmp` is removed on EVERY path; `btn` is restored to `btnLabel` + pointer
+// events on every outcome. filenameBase gets the date + .png suffix appended.
+// Behaviour (toasts, filename, clipboard/download split) is identical to the
+// original inline exportPng body, so existing callers are unchanged.
+function exportNodePng(tmp, filenameBase, btn, btnLabel){
   document.body.appendChild(tmp);
 
-  function filename(){ return (d.asset!=='—'?d.asset:'trade').replace(/\//g,'-')+'_'+today().replace(/\//g,'-')+'.png'; }
-  function restore(){ b.textContent='PNG for X'; b.style.pointerEvents='auto'; }
+  function filename(){ return filenameBase.replace(/\//g,'-')+'_'+today().replace(/\//g,'-')+'.png'; }
+  function restore(){ btn.textContent=btnLabel; btn.style.pointerEvents='auto'; }
   function downloadBlob(bl){ var url=URL.createObjectURL(bl); var l=document.createElement('a'); l.download=filename(); l.href=url; l.click(); URL.revokeObjectURL(url); restore(); toast('PNG saved ✓'); }
 
   var canClip=navigator.clipboard && window.ClipboardItem && window.isSecureContext;
@@ -663,6 +729,16 @@ function exportPng(){
       if(tmp.parentNode) document.body.removeChild(tmp); restore(); toast('Error: '+e.message);
     });
   }
+}
+
+function exportPng(){
+  var b=$('exb');
+  b.textContent='Rendering...'; b.style.pointerEvents='none';
+  var tmp=document.createElement('div');
+  tmp.style.cssText='position:absolute;left:-9999px;top:0;width:520px;padding:24px;background:#0c0c0e;border-radius:12px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,sans-serif;color:#e4e4e7;font-size:15px;line-height:1.5';
+  var d=readCard();
+  tmp.innerHTML='<div style="background:#151517;border:1px solid #2a2a2e;border-radius:12px;padding:20px">'+cardHtml(d)+'</div>';
+  exportNodePng(tmp, (d.asset!=='—'?d.asset:'trade'), b, 'PNG for X');
 }
 
 // Transfer the Sizer result into the Trade Log fields.
@@ -924,6 +1000,7 @@ function bind(){
   on('chartToggle','click',toggleChart);
   on('feedLoad','click',applyFeed);
   on('toLogBtn','click',sendToLog);
+  on('szExb','click',exportSizerPng);
 
   // log
   on('bl','click',function(){ setMode('live'); });
