@@ -538,18 +538,23 @@ function currentTV(){
   return p?p.tv:'';
 }
 
-// Map a preset symbol string to a Binance spot symbol (<BASE>USDT), or null for
-// non-crypto. Covers the Breakout coins (BTC, ETH, …) and the FTMO crypto CFDs
-// (BTC/USD, ETH/USD). FX / indices / metals (EUR/USD, US100, XAU/USD) → null →
-// the caller keeps the existing TradingView widget + chips path.
-var CRYPTO_BASES = ['BTC','ETH','SOL','XRP','ADA','AVAX','LINK','DOGE'];
-function cryptoBinanceSymbol(presetSymbol){
+// Map a preset symbol string to a Kraken OHLC pair, or null for non-crypto.
+// Covers the Breakout coins (BTC, ETH, …) and the FTMO crypto CFDs (BTC/USD,
+// ETH/USD). FX / indices / metals (EUR/USD, US100, XAU/USD) → null → the caller
+// keeps the existing TradingView widget + chips path. Kraken's request pairs use
+// XBT (not BTC) and XDG (not DOGE); the canonical key in the response can differ
+// again (e.g. XXBTZUSD) — we read it back, never assume it.
+var KRAKEN_PAIRS = {
+  BTC:'XBTUSD', ETH:'ETHUSD', SOL:'SOLUSD', XRP:'XRPUSD',
+  ADA:'ADAUSD', AVAX:'AVAXUSD', LINK:'LINKUSD', DOGE:'XDGUSD'
+};
+function cryptoKrakenPair(presetSymbol){
   if(!presetSymbol) return null;
   var s=String(presetSymbol).toUpperCase().trim();
   // Breakout presets are the bare coin ('BTC'); FTMO crypto is 'BTC/USD'.
   var base=s.indexOf('/')>=0 ? s.split('/')[0] : s;
   base=base.trim();
-  return CRYPTO_BASES.indexOf(base)>=0 ? base+'USDT' : null;
+  return Object.prototype.hasOwnProperty.call(KRAKEN_PAIRS, base) ? KRAKEN_PAIRS[base] : null;
 }
 
 // Render Entry/SL/TP as colored chips overlaid on the sizer chart. The free
@@ -588,11 +593,11 @@ function loadTVScript(cb){
 
 function renderChart(){
   // Crypto dispatch: a Breakout coin or FTMO BTC/ETH with NO manual feed
-  // override gets the Lightweight Charts path (real Binance candles + price
+  // override gets the Lightweight Charts path (real Kraken candles + price
   // lines). A manual override is a deliberate power-user choice → TV widget.
   var p=currentPreset();
-  var binance = state.feedOverride ? null : cryptoBinanceSymbol(p ? p.s : '');
-  if(binance){ renderCryptoChart(binance); return; }
+  var krakenPair = state.feedOverride ? null : cryptoKrakenPair(p ? p.s : '');
+  if(krakenPair){ renderCryptoChart(krakenPair); return; }
 
   // Non-crypto (or overridden): existing TradingView widget + chips path,
   // unchanged. Tear down any live crypto chart first so we don't leak/double.
@@ -632,7 +637,7 @@ function renderChartFallback(sym){
     +'<a href="'+link+'" target="_blank" rel="noopener" style="display:block;padding:6px;text-align:center;font-size:12px;color:#8a8a90;background:#0c0c0e;text-decoration:none;border-top:1px solid #2a2a2e">Chart blocked here? Open on TradingView ↗</a>';
 }
 
-/* ---------- Crypto chart (Lightweight Charts + Binance klines) ---------- */
+/* ---------- Crypto chart (Lightweight Charts + Kraken OHLC) ---------- */
 // For crypto instruments we draw real candles with horizontal Entry/SL/TP
 // price lines (createPriceLine) that move live as the levels are typed. The
 // FX/indices/metals path above (TV widget + chips) is untouched.
@@ -666,9 +671,10 @@ function destroyCryptoChart(){
   if(l.chart) try{ l.chart.remove(); }catch(e){}
 }
 
-// Build the Lightweight Charts crypto chart for `sym` (Binance spot symbol),
-// fetch 1h klines, draw candles + level lines. Any lib-load or fetch/HTTP
-// failure falls back to the existing TV widget + chips so levels never vanish.
+// Build the Lightweight Charts crypto chart for `sym` (Kraken request pair),
+// fetch 1h OHLC, draw candles + level lines. Any lib-load / fetch / HTTP /
+// API-error / shape failure falls back to the existing TV widget + chips so
+// levels never vanish.
 function renderCryptoChart(sym){
   // Tear down a prior crypto chart first (e.g. BTC→ETH switch) — no double chart.
   destroyCryptoChart();
@@ -697,7 +703,7 @@ function renderCryptoChart(sym){
     if(!ok || !window.LightweightCharts){ fallback(); return; }
     // Guard: instrument/chart may have changed while the lib loaded.
     var p=currentPreset();
-    if(!state.chartOpen || state.feedOverride || cryptoBinanceSymbol(p?p.s:'')!==sym){ return; }
+    if(!state.chartOpen || state.feedOverride || cryptoKrakenPair(p?p.s:'')!==sym){ return; }
     el.innerHTML='';
     var w=el.clientWidth||el.offsetWidth||520;
     var chart, series;
@@ -720,16 +726,25 @@ function renderCryptoChart(sym){
     window.addEventListener('resize', onResize);
     state.lwc={ chart:chart, series:series, lines:[], resize:onResize, sym:sym };
 
-    fetch('https://api.binance.com/api/v3/klines?symbol='+sym+'&interval=1h&limit=300')
+    fetch('https://api.kraken.com/0/public/OHLC?pair='+sym+'&interval=60')
       .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
-      .then(function(rows){
+      .then(function(json){
         // Stale guard: a newer chart may have replaced this one mid-fetch.
-        if(state.lwc && state.lwc.chart===chart && Array.isArray(rows)){
-          var data=rows.map(function(r){ return { time:r[0]/1000, open:+r[1], high:+r[2], low:+r[3], close:+r[4] }; });
-          series.setData(data);
-          chart.timeScale().fitContent();
-          applyCryptoLevels();
-        }
+        if(!(state.lwc && state.lwc.chart===chart)) return;
+        // Kraken error envelope: { error:[...], result:{ <canonicalPair>:[[t,o,h,l,c,vwap,vol,cnt]...], last } }.
+        if(json && json.error && json.error.length){ fallback(); return; }
+        var result=json && json.result;
+        if(!result){ fallback(); return; }
+        // The canonical key (e.g. 'XXBTZUSD') is whatever Kraken returns — take
+        // the first non-'last' key rather than guessing the normalised name.
+        var keys=Object.keys(result).filter(function(k){ return k!=='last'; });
+        var rows=keys.length ? result[keys[0]] : null;
+        if(!rows || !rows.length){ fallback(); return; }
+        // Kraken time is already seconds; o/h/l/c are strings → coerce with +.
+        var data=rows.map(function(r){ return { time:r[0], open:+r[1], high:+r[2], low:+r[3], close:+r[4] }; });
+        series.setData(data);
+        chart.timeScale().fitContent();
+        applyCryptoLevels();
       })
       .catch(function(){ if(state.lwc && state.lwc.chart===chart) fallback(); });
   });
