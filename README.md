@@ -51,6 +51,13 @@ rather than sizing off a stale value.
 **Breakout** is crypto-only (since Feb 2024), perpetuals, Kraken-backed feeds. Sizing is in coins:
 `coins = Risk$ / |Entry − SL|` (CV = 1). No FX/indices/metals on Breakout.
 
+**Lot/coin step rounding.** The computed volume is floored to a tradeable step per instrument
+(FTMO `0.01` lots, Breakout `0.001` coins). Flooring is deliberate — it can only round risk *down*,
+never above the target. Like the contract values, these steps are assumptions, not verified broker
+specs; correct them in the `step` field of the relevant `PRESETS` entry if your platform differs. If
+the risk is too small for one step, the sizer shows a "below minimum size" warning instead of a
+fake-tradeable figure.
+
 ## Chart feeds
 
 Default feed follows the selected instrument (FTMO → OANDA feeds, Breakout → Kraken). Override the

@@ -43,7 +43,7 @@ Plaintext.)
 **Warum:** `calcSize` rechnet stur. Warnung im `sz-warn`-Feld bei: SL auf falscher Seite je Long/Short,
 R:R < 1, Entry == SL, unplausibel große Risk-Distanz. Fängt Fat-Finger ab, bevor es ins Sheet geht.
 
-### P2 — Lot-/Coin-Step-Rundung  ·  Status: offen  ·  Aufwand: S–M
+### P2 — Lot-/Coin-Step-Rundung  ·  Status: ✅ merged → main (fc8f95f)  ·  Aufwand: S–M
 **Warum:** `fmtVol` formatiert nur die Anzeige; 0.833 Lots ist nicht handelbar, wenn der Step 0.01 ist.
 `step` pro Instrument ins Preset, Volume auf handelbaren Step **abrunden** (Risk bleibt ≤ Ziel).
 
@@ -52,7 +52,7 @@ R:R < 1, Entry == SL, unplausibel große Risk-Distanz. Fängt Fat-Finger ab, bev
 als Liste in localStorage: „Log Trade" hängt an, darunter Liste zum Ansehen/Bearbeiten/Löschen/
 Re-Export. „Copy for Sheet" ist dann nicht mehr der einzige Persistenz-Ort.
 
-### P2 — Auto-Richtungserkennung (Long/Short aus Zahlen)  ·  Status: offen  ·  Aufwand: S
+### P2 — Auto-Richtungserkennung (Long/Short aus Zahlen)  ·  Status: ✅ merged → main (386f8fe)  ·  Aufwand: S
 **Warum:** Das Tool soll die Richtung selbst aus den Zahlenwerten ableiten statt manuell. Logik steht
 schon (Sizer leitet Richtung aus `sign(Entry − SL)` ab, siehe P1-Validierung). Hier: im **Trade Log**
 die Long/Short-Wahl (`state.direction`, Buttons `blo`/`bsh`) automatisch setzen, sobald Entry + SL
