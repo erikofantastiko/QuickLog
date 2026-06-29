@@ -12,18 +12,20 @@ var $ = function(id){ return document.getElementById(id); };
 /* ---------- Constants ---------- */
 
 // Instrument presets per broker.
-// cv = account-currency (USD) value per 1.0 price move, per lot.
-// quote:'JPY' marks pairs whose cv must be derived from entry (cv = 100000 / price).
+// cv = account-currency (ACCOUNT_CCY) value per 1.0 price move, per lot.
+// For FX, base/quote drive the cv rule (see contractValueFor): quote===ACCOUNT_CCY → cv is
+// the static notional (exact); otherwise cv = FX_LOT/entry — exact when base===ACCOUNT_CCY
+// (USD is the base, e.g. USD/JPY, USD/CAD), a flagged cross-rate approximation otherwise.
 var PRESETS = {
   ftmo:[
-    {s:'EUR/USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURUSD'},
-    {s:'GBP/USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:GBPUSD'},
-    {s:'USD/JPY',cv:100000,unit:'lots',step:0.01,quote:'JPY',hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:USDJPY'},
-    {s:'EUR/JPY',cv:100000,unit:'lots',step:0.01,quote:'JPY',hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:EURJPY'},
-    {s:'GBP/JPY',cv:100000,unit:'lots',step:0.01,quote:'JPY',hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:GBPJPY'},
-    {s:'EUR/GBP',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURGBP'},
-    {s:'AUD/USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:AUDUSD'},
-    {s:'USD/CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:USDCAD'},
+    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURUSD'},
+    {s:'GBP/USD',base:'GBP',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:GBPUSD'},
+    {s:'USD/JPY',base:'USD',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:USDJPY'},
+    {s:'EUR/JPY',base:'EUR',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:EURJPY'},
+    {s:'GBP/JPY',base:'GBP',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:GBPJPY'},
+    {s:'EUR/GBP',base:'EUR',quote:'GBP',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURGBP'},
+    {s:'AUD/USD',base:'AUD',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:AUDUSD'},
+    {s:'USD/CAD',base:'USD',quote:'CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ CAD price)',tv:'OANDA:USDCAD'},
     {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:NAS100USD'},
     {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:SPX500USD'},
     {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD'},
@@ -46,8 +48,12 @@ var PRESETS = {
   custom:[{s:'Custom',cv:'',unit:'units',step:0.01,hint:'enter contract value manually',tv:''}]
 };
 
-// FX standard lot notional — basis for JPY-quoted cv derivation.
+// FX standard lot notional — basis for entry-derived cv.
 var FX_LOT = 100000;
+
+// Account currency. cv must be expressed in this currency (see contractValueFor). Single
+// point of change if the FTMO account is ever switched to a non-USD denomination.
+var ACCOUNT_CCY = 'USD';
 
 // Column order for the Google Sheet export. Must stay byte-identical to
 // the downstream sheet layout — '' marks a column the sheet fills itself.
@@ -136,29 +142,41 @@ function roundVol(v){ var st=stepFor(); return Math.floor(v/st + 1e-9)*st; }
 // Decimal places of the current step, so the displayed/logged value isn't re-truncated.
 function stepDecimals(){ var st=String(stepFor()); var i=st.indexOf('.'); return i<0?0:st.length-i-1; }
 
-// Resolve the contract value for a preset given the current entry.
-// JPY-quoted pairs derive cv = FX_LOT / entry; everything else is static.
+// Resolve the contract value (ACCOUNT_CCY value of a 1.0 price move per lot) for a preset
+// given the current entry. P&L accrues in the quote currency, then converts to ACCOUNT_CCY:
+//   quote === ACCOUNT_CCY → cv = static notional (exact; e.g. EUR/USD on a USD account).
+//   otherwise             → cv = FX_LOT / entry — exact when base === ACCOUNT_CCY (USD is the
+//                           base, e.g. USD/JPY, USD/CAD); for true cross pairs (USD neither
+//                           base nor quote) it is a first-order proxy, flagged in the UI.
+// Presets without a `quote` (indices/metals/crypto, all ACCOUNT_CCY-quoted) stay static.
 function contractValueFor(preset, entryStr){
-  if(preset && preset.quote==='JPY'){
+  if(!preset) return NaN;
+  if(preset.quote && preset.quote!==ACCOUNT_CCY){
     var e=parseNum(entryStr);
     if(isNaN(e)||e<=0) return NaN;
     return FX_LOT/e;
   }
-  return preset?parseNum(preset.cv):NaN;
+  return parseNum(preset.cv);
 }
 
 // Keep the Contract Value field + hint in sync with instrument & entry.
-// For JPY pairs the field is auto-derived from entry unless the user overrode it.
+// Entry-derived pairs (quote ≠ ACCOUNT_CCY) auto-fill the field unless the user overrode it;
+// true cross pairs (base also ≠ ACCOUNT_CCY) are flagged as an approximation to verify/override.
 function syncContractValue(){
   var p=currentPreset();
+  if(!p) return;
   var hintEl=$('cvHint'), cvEl=$('cv');
-  if(p && p.quote==='JPY' && !state.cvManual){
+  var derives = !!(p.quote && p.quote!==ACCOUNT_CCY);
+  var cross   = derives && p.base!==ACCOUNT_CCY;
+  if(derives && !state.cvManual){
     var derived=contractValueFor(p,$('szEntry').value);
     cvEl.value=isNaN(derived)?'':derived.toFixed(2);
-    hintEl.textContent='(≈ 100,000 ÷ entry — auto from entry price)';
-  } else if(p && p.quote==='JPY' && state.cvManual){
-    hintEl.textContent='(manual override — JPY auto-derive off)';
-  } else if(p){
+    hintEl.textContent = cross
+      ? '(≈ 100,000 ÷ entry — cross-rate approx, verify in MT5 / override)'
+      : '(= 100,000 ÷ entry — auto from entry price)';
+  } else if(derives && state.cvManual){
+    hintEl.textContent='(manual override — auto-derive off)';
+  } else {
     hintEl.textContent='('+p.hint+')';
   }
 }
@@ -499,7 +517,8 @@ function onBrokerChange(){
 function onInstrumentChange(){
   state.cvManual=false;
   var p=currentPreset();
-  if(p && p.quote!=='JPY') $('cv').value=p.cv;   // JPY value is derived in syncContractValue()
+  // Static cv only for non-derived pairs; entry-derived ones are filled by syncContractValue().
+  if(p && !(p.quote && p.quote!==ACCOUNT_CCY)) $('cv').value=p.cv;
   if(state.chartOpen){
     state.feedOverride='';
     var fi=$('feedInput'); if(fi) fi.value=currentTV();

@@ -89,6 +89,8 @@ function extractVarScalar(name) {
 const pieces = [
   extractVarLiteral('PRESETS', '{', '}'),
   extractVarScalar('FX_LOT'),
+  // contractValueFor now compares quote against ACCOUNT_CCY — must be in scope or it ReferenceErrors.
+  extractVarScalar('ACCOUNT_CCY'),
   extractVarLiteral('SHEET_COLUMNS', '{', '}'),
   extractFn('parseNum'),
   extractFn('contractValueFor'),
@@ -111,7 +113,7 @@ const $ = (id) => ({ value: id in fields ? fields[id] : '' });
 
 const factory = new Function('$', 'fields', `
   ${pieces.join('\n')}
-  return { PRESETS, FX_LOT, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize };
+  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize };
 `);
 const M = factory($, fields);
 
@@ -120,6 +122,8 @@ const M = factory($, fields);
 const presetByName = (name) => M.PRESETS.ftmo.find((p) => p.s === name);
 const EURUSD = presetByName('EUR/USD');
 const USDJPY = presetByName('USD/JPY');
+const USDCAD = presetByName('USD/CAD');
+const EURGBP = presetByName('EUR/GBP');
 
 /* ---------- tiny assertion harness ---------- */
 
@@ -144,17 +148,25 @@ eq(M.SHEET_COLUMNS.backtest.length, 28, 'SHEET_COLUMNS.backtest length must be 2
 
 // sanity: presets were actually found
 ok(!!EURUSD && !!USDJPY, 'EUR/USD and USD/JPY presets must exist in PRESETS.ftmo');
+ok(!!USDCAD && !!EURGBP, 'USD/CAD and EUR/GBP presets must exist in PRESETS.ftmo');
+
+// ACCOUNT_CCY drives the cv classification; pin it so an accidental change is caught.
+eq(M.ACCOUNT_CCY, 'USD', "ACCOUNT_CCY must be 'USD'");
 
 // FX_LOT is the standard-lot notional and the basis for JPY cv derivation. Pin it
 // EXACTLY (integer, no tolerance) — a small drift (e.g. 100000->100001) is otherwise
 // invisible to the loose cv/vol tolerances and would slip through unnoticed.
 eq(M.FX_LOT, 100000, 'FX_LOT must be 100000 (standard-lot notional)');
 
-// 2. contractValueFor — JPY derives cv = FX_LOT / entry; non-JPY is static.
+// 2. contractValueFor — quote≠ACCOUNT_CCY derives cv = FX_LOT/entry; quote===ACCOUNT_CCY is static.
 //    Expect the EXACT 100000/150 at tol 1e-6 so FX_LOT drift also fails through the cv
 //    path, not only via the direct pin above. Rounded 666.67 +/-0.01 was too loose.
 approx(M.contractValueFor(USDJPY, '150'), 100000 / 150, 1e-6, 'contractValueFor(USD/JPY,"150") == 100000/150');
-eq(M.contractValueFor(EURUSD, '1.085'), 100000, 'contractValueFor(EUR/USD,"1.085") == 100000');
+eq(M.contractValueFor(EURUSD, '1.085'), 100000, 'contractValueFor(EUR/USD,"1.085") == 100000 (quote=USD → static)');
+// USD/CAD: USD is the base ⇒ exact entry-derive (the fix; previously mis-treated as static 100000).
+approx(M.contractValueFor(USDCAD, '1.37'), 100000 / 1.37, 1e-6, 'contractValueFor(USD/CAD,"1.37") == 100000/1.37');
+// EUR/GBP: USD is neither base nor quote ⇒ best-effort entry-derive (flagged approx in the UI).
+approx(M.contractValueFor(EURGBP, '0.85'), 100000 / 0.85, 1e-6, 'contractValueFor(EUR/GBP,"0.85") == 100000/0.85 (cross approx)');
 
 // 3. Sizing of known trades via the REAL calcSize (account 100000, risk 0.25 => riskAmt 250).
 //    EUR/USD 1.08500 -> 1.08200, cv 100000 => vol ~= 0.8333.

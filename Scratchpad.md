@@ -26,6 +26,12 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   Charts: Krypto über Kraken-OHLC (kein Key), FX/Metalle über Twelve Data (User-Key nur in
   localStorage `quicklog_td_key`). Indizes/Override → TV-Widget + Chips. Linien wandern live beim
   Tippen; jeder Fehler ⇒ Widget-Fallback. Auf `loop/p0-pwa`, Verifier APPROVE.
+- **FTMO Contract Values verifiziert + kontowährungs-bewusste cv** — Online-Recherche gegen EU/classic
+  FTMO: alle rohen Contract Sizes korrekt (FX 100k, Indizes Contract size 1 / $1/Pt, XAU 100 oz,
+  XAG 5000 oz, BTC/ETH 1). Recherche deckte ein Umrechnungs-Loch auf: cv muss in Kontowährung (USD)
+  stehen. `contractValueFor` generalisiert von „JPY" auf „Kontowährung" (`ACCOUNT_CCY`): quote=USD →
+  statisch; sonst `FX_LOT/entry`, exakt bei Basis=USD (**USD/CAD-Fix**), sonst Cross-Approx mit
+  sichtbarem „verify in MT5"-Hint. Keine Cross-Rate-Abfrage (keyless/offline bleibt). Test 25→29.
 
 ## Backlog (priorisiert)
 
@@ -91,5 +97,9 @@ importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Fra
 
 ## Offene Fragen / Annahmen
 
-- **FTMO Contract Values** sind rückgerechnet, kein offizieller Spec → in MT5 verifizieren
-  (Market Watch → Specification). Bei Abweichung: manuellen Override im Sizer nutzen.
+- **FTMO Contract Values** — ✅ via Online-Recherche gegen EU/classic FTMO verifiziert (Stand
+  2026-06): Contract Sizes korrekt, cv jetzt kontowährungs-bewusst (`ACCOUNT_CCY='USD'`). Verbleibende
+  Unschärfe: Cross-Rate-Paare EUR/JPY, GBP/JPY, EUR/GBP (USD weder Basis noch Quote) — `cv = FX_LOT/entry`
+  ist dort nur eine Näherung, im UI als „≈ cross-rate approx, verify in MT5 / override" markiert. Exakte
+  Auto-Korrektur bräuchte eine USDJPY/GBPUSD-Quelle (bewusst nicht gebaut: bricht keyless/offline). Bei
+  diesen Paaren cv in MT5 prüfen oder manuell überschreiben. Wechsel der Kontowährung: nur `ACCOUNT_CCY`.

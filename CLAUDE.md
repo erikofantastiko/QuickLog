@@ -28,10 +28,17 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Spaltenreihenfolge passen (`SHEET_COLUMNS`: Live = 23 Spalten, Backtest = 28). `''` = Spalte, die das
   Sheet selbst füllt. Downstream-Journal hängt daran.
 - **Sizing-Formel:** `vol = riskAmt / (dist × cv)`, mit `riskAmt = account × risk%`, `dist = |entry − sl|`.
-- **JPY-quotierte Paare:** `cv = 100000 / entry` (auto-derived aus dem Entry-Preis, nicht statisch
-  100000). Feld bleibt editierbar = manueller Override. Ohne Entry → kein Ergebnis (kein Mis-Sizing).
-- **Contract Values sind rückgerechnete Annahmen**, kein offizieller FTMO-Spec → in MT5 prüfen
-  (Market Watch → Specification). Jedes Instrument hat einen manuellen Override.
+- **cv ist kontowährungs-bewusst (`ACCOUNT_CCY='USD'`).** `cv` = Wert einer 1.0-Preisbewegung pro
+  Lot in Kontowährung. Regel in `contractValueFor`: `quote===ACCOUNT_CCY` → cv statisch (`preset.cv`,
+  exakt); sonst `cv = FX_LOT / entry` — **exakt** wenn `base===ACCOUNT_CCY` (USD ist Basis: USD/JPY,
+  USD/CAD), **flagged Cross-Approx** wenn USD weder Basis noch Quote (EUR/JPY, GBP/JPY, EUR/GBP →
+  Hint „≈ … verify in MT5 / override"). Feld bleibt editierbar = manueller Override. Ohne Entry →
+  kein Ergebnis (kein Mis-Sizing). FX-Presets tragen dafür `base`/`quote`; Non-FX (USD-quotiert)
+  bleibt statisch. Bei Kontowechsel nur `ACCOUNT_CCY` ändern.
+- **Contract Sizes verifiziert (EU/classic FTMO, Stand 2026-06):** FX 100.000 Einheiten/Lot, Indizes
+  .cash Contract size 1 → $1/Punkt/Lot, XAU 100 oz, XAG 5000 oz, BTC/ETH 1 Coin — decken sich mit
+  FTMOs EU-Specs. Restunschärfe sind nur die Cross-Rate-Paare oben (→ Override). Trotzdem im
+  Zweifel in MT5 prüfen (Market Watch → Specification); jedes Instrument hat manuellen Override.
 - **Broker-Modelle:** FTMO = MT5 CFD, Sizing in Lots. Breakout = Crypto-Perps, Sizing in Coins
   (`coins = Risk$ / |Entry − SL|`, cv = 1), Kraken-Feeds.
 - **TD-API-Key nur in localStorage** (`quicklog_td_key`) — NIE im Code, PNG, Sheet, `quicklog`-Blob
@@ -42,8 +49,9 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
 
 - Schnelle Syntaxprüfung: `node --check app.js` (die Logik liegt jetzt direkt in `app.js`, keine
   `<script>`-Extraktion mehr nötig).
-- Geld-Mathematik: `node test/sizing.test.mjs` — 20 Assertions (SHEET_COLUMNS 23/28, `contractValueFor`
-  JPY/non-JPY, `FX_LOT` exakt gepinnt, Sizing EUR/USD 0.8333 & JPY 0.375, `roundVol`-Edges). Liest die
+- Geld-Mathematik: `node test/sizing.test.mjs` — 29 Assertions (SHEET_COLUMNS 23/28, `contractValueFor`
+  statisch/derive/cross inkl. USD/CAD & EUR/GBP, `FX_LOT` & `ACCOUNT_CCY` gepinnt, Sizing EUR/USD
+  0.8333 & JPY 0.375, `roundVol`-Edges). Liest die
   Formeln/Werte direkt aus dem Quelltext (kein hartkodiertes Replikat) → regrediert bei gebrochener Mathematik.
   Quelle ist seit dem PWA-Split `app.js` (nicht mehr `index.html`). Bei `const`/Arrow bricht die
   Extraktion laut (Testfehler, nie still grün).
