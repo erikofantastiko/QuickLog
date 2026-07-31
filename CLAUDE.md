@@ -25,8 +25,13 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
 ## Invarianten — nicht regredieren lassen
 
 - **Sheet-Spaltenreihenfolge byte-identisch.** Der „Copy for Sheet"-Output muss exakt zur Google-Sheet-
-  Spaltenreihenfolge passen (`SHEET_COLUMNS`: Live = 23 Spalten, Backtest = 28). `''` = Spalte, die das
-  Sheet selbst füllt. Downstream-Journal hängt daran.
+  Spaltenreihenfolge passen (`SHEET_COLUMNS`: Live = 23 Spalten A–W, Backtest = 28 = 5 BT-Spalten +
+  die 23 Live-Spalten 1:1). `''` = Spalte, die das Sheet selbst füllt. Downstream-Journal hängt daran.
+- **Formelspalten M/N/O/P (Live-Index 12–15) bleiben IMMER `''`** — PnL (%), Risk/Reward, R Ergebnis,
+  Kumulatives R rechnet das Sheet. Ein statischer Wert dort überschreibt die Formel. Das berechnete
+  `rr` wird deshalb nicht mehr exportiert (nur noch auf Karte/PNG).
+- **Optionale Sheet-Extras (D/F/K/L/S/U/V/W)** hängen an der Sektion „Sheet extras (optional)" im
+  Trade Log (`shot`,`exi`,`rskUsd`,`pnl`,`res`,`mgmt`,`emo`,`fbk`). Leer ⇒ leere Zelle (offene Trades).
 - **Sizing-Formel:** `vol = riskAmt / (dist × cv)`, mit `riskAmt = account × risk%`, `dist = |entry − sl|`.
 - **cv ist kontowährungs-bewusst (`ACCOUNT_CCY='USD'`).** `cv` = Wert einer 1.0-Preisbewegung pro
   Lot in Kontowährung. Regel in `contractValueFor`: `quote===ACCOUNT_CCY` → cv statisch (`preset.cv`,
@@ -49,7 +54,8 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
 
 - Schnelle Syntaxprüfung: `node --check app.js` (die Logik liegt jetzt direkt in `app.js`, keine
   `<script>`-Extraktion mehr nötig).
-- Geld-Mathematik: `node test/sizing.test.mjs` — 29 Assertions (SHEET_COLUMNS 23/28, `contractValueFor`
+- Geld-Mathematik: `node test/sizing.test.mjs` — 55 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
+  Mapping A–W, leere Formelspalten M/N/O/P und Live↔Backtest-Ausrichtung, `contractValueFor`
   statisch/derive/cross inkl. USD/CAD & EUR/GBP, `FX_LOT` & `ACCOUNT_CCY` gepinnt, Sizing EUR/USD
   0.8333 & JPY 0.375, `roundVol`-Edges). Liest die
   Formeln/Werte direkt aus dem Quelltext (kein hartkodiertes Replikat) → regrediert bei gebrochener Mathematik.

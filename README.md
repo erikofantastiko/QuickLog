@@ -104,15 +104,43 @@ site data) resets to defaults. No trade history is stored — only the current w
 
 ## Sheet column order (Live mode)
 
-The copied row maps to the Trades tab in this exact order (empty fields left blank for later fill):
+The copied row maps to the Trades tab in this exact order (23 columns, A–W):
 
-```
-Trade # | Datum & Zeit | Asset | Setup Screenshot | Entry | Exit | SL | TP | Lot Size |
-Risk % | Risk in $ | PnL ($) | PnL (%) | Risk/Reward | R Ergebnis | Kumulatives R |
-Richtung | Session | Ergebnis | Setup/Grund | Trade Management | Emotionen | Feedback
-```
+| Col | Header | Filled by |
+|-----|--------|-----------|
+| A | Trade # | sheet (auto-numbering) |
+| B | Datum & Zeit | app |
+| C | Asset | app |
+| D | Setup Screenshot | app — *Sheet extras*, optional |
+| E | Entry | app |
+| F | Exit | app — *Sheet extras*, optional (empty while the trade is open) |
+| G | SL | app |
+| H | TP | app |
+| I | Lot Size | app |
+| J | Risk % | app |
+| K | Risk in $ | app — *Sheet extras*, optional |
+| L | PnL ($) | app — *Sheet extras*, optional |
+| M | PnL (%) | **sheet formula — always pasted empty** |
+| N | Risk/Reward | **sheet formula — always pasted empty** |
+| O | R Ergebnis | **sheet formula — always pasted empty** |
+| P | Kumulatives R | **sheet formula — always pasted empty** |
+| Q | Richtung | app |
+| R | Session | app |
+| S | Ergebnis | app — *Sheet extras*, optional (`Win` / `Lose` / `Breakeven`) |
+| T | Setup/Grund | app (setup + note) |
+| U | Trade Management | app — *Sheet extras*, optional |
+| V | Emotionen | app — *Sheet extras*, optional |
+| W | Feedback | app — *Sheet extras*, optional |
 
-Backtest mode prepends 5 columns: `BT-Session-ID | Pool | Random-Date | Briefing-Korrekt | System-Konformität`.
+The four formula columns M–P are **never** written by the app. The R:R shown on the trade card is
+display-only; pasting a static value into N would overwrite the sheet's own formula.
+
+The optional columns live behind the collapsible **"Sheet extras (optional)"** section in the Trade
+Log tab. Leaving them empty is fine — they copy as empty cells, so a still-open trade pastes cleanly
+and the fields can be filled in later directly in the sheet.
+
+Backtest mode prepends 5 columns: `BT-Session-ID | Pool | Random-Date | Briefing-Korrekt |
+System-Konformität` (28 columns total); columns 6–28 are the Live mapping above, unchanged.
 
 The empty spacer column that used to sit between `Ergebnis` and `Setup/Grund` has been removed from
 the sheet — the mapping assumes it is gone.
