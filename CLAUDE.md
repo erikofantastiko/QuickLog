@@ -46,8 +46,8 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Zweifel in MT5 prüfen (Market Watch → Specification); jedes Instrument hat manuellen Override.
 - **Broker-Modelle:** FTMO = MT5 CFD, Sizing in Lots. Breakout = Crypto-Perps, Sizing in Coins
   (`coins = Risk$ / |Entry − SL|`, cv = 1), Kraken-Feeds.
-- **TD-API-Key nur in localStorage** (`quicklog_td_key`) — NIE im Code, PNG, Sheet, `quicklog`-Blob
-  oder der Trade-History. `#tdKey` ist `type=password` und steht NICHT in `PERSISTED_FIELDS`. Die
+- **TD-API-Key nur in localStorage** (`quicklog_td_key`) — NIE im Code, PNG, Sheet oder
+  `quicklog`-Blob. `#tdKey` ist `type=password` und steht NICHT in `PERSISTED_FIELDS`. Die
   veröffentlichte Seite ist keyless.
 
 ## Testen
