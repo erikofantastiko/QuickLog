@@ -85,15 +85,6 @@
   font-size:var(--fs-sm);font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999
 }
 .tl .tst.vis{opacity:1}
-.tl .tle{font-size:var(--fs-sm);color:var(--tx3);padding:14px 4px}
-.tl .tr{display:flex;align-items:center;gap:10px;background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin-bottom:8px}
-.tl .tr-a{font-size:15px;font-weight:600;color:var(--tx);flex-shrink:0}
-.tl .tr-b{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;flex-shrink:0}
-.tl .tr-b.lo{background:var(--gnbg);color:var(--gn)}
-.tl .tr-b.so{background:var(--rdbg);color:var(--rd)}
-.tl .tr-m{flex:1;min-width:0;font-size:12px;color:var(--tx2);font-family:var(--mn);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tl .tr-x{flex-shrink:0;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx2);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sn)}
-.tl .tr-x:hover{border-color:var(--tx2);color:var(--tx)}
 .tl #chartLevels{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:10px}
 .tl #chartLevels:empty{display:none}
 .tl .lvl{font-family:var(--mn);font-size:var(--fs-2xs);font-weight:600;padding:3px 8px;border-radius:6px}

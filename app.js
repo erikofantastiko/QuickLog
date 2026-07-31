@@ -1075,133 +1075,6 @@ function loadState(){
   return true;
 }
 
-/* ---------- Trade history (logged trades, separate localStorage key) ---------- */
-// Persisted in TRADES_KEY ('quicklog_trades'), independent of the form-state key
-// ('quicklog'). Purely additive: does not touch copyForSheet/cardHtml/sizing.
-
-var TRADES_KEY = 'quicklog_trades';
-var trades = [];
-
-function loadTrades(){
-  var raw;
-  try{ raw=localStorage.getItem(TRADES_KEY); }catch(e){ return []; }
-  if(!raw) return [];
-  try{ var a=JSON.parse(raw); return Array.isArray(a)?a:[]; }catch(e){ return []; }
-}
-function saveTrades(arr){
-  try{ localStorage.setItem(TRADES_KEY, JSON.stringify(arr)); }catch(e){ /* quota/unavailable — non-fatal */ }
-}
-
-// Snapshot the current Log form into a plain trade object.
-function collectTrade(){
-  return {
-    mode:      state.mode,
-    btId:      $('btId').value,
-    pool:      $('pl').value,
-    asset:     $('ast').value,
-    direction: state.direction,
-    session:   $('ses').value,
-    risk:      getLogRisk(),
-    entry:     $('ent').value,
-    sl:        $('slo').value,
-    tp:        $('tpr').value,
-    vol:       $('vol').value,
-    setup:     $('stp').value,
-    note:      $('nte').value,
-    ts:        new Date().toISOString()
-  };
-}
-
-// R:R from a stored trade's levels, or '—' when not computable.
-function tradeRR(t){
-  var e=parseNum(t.entry), s=parseNum(t.sl), p=parseNum(t.tp);
-  if(isNaN(e)||isNaN(s)||isNaN(p)||s===e) return '—';
-  return (Math.abs(p-e)/Math.abs(e-s)).toFixed(2);
-}
-
-function renderTrades(){
-  var box=$('tradeList'); if(!box) return;
-  if(!trades.length){ box.innerHTML='<div class="tle">No logged trades yet</div>'; return; }
-  var html='';
-  for(var i=0;i<trades.length;i++){
-    var t=trades[i];
-    var isLong=t.direction==='Long';
-    var asset=(t.asset&&t.asset.trim())?esc(t.asset):'—';
-    var dateTxt='';
-    var d=new Date(t.ts);
-    if(t.ts && !isNaN(d.getTime())) dateTxt=esc(d.toLocaleDateString('en-GB'));
-    var rr=esc(tradeRR(t));
-    html+='<div class="tr">'
-      +'<span class="tr-a">'+asset+'</span>'
-      +'<span class="tr-b '+(isLong?'lo':'so')+'">'+(isLong?'Long':'Short')+'</span>'
-      +'<span class="tr-m">'+dateTxt+(dateTxt?' · ':'')+'R:R '+rr+'</span>'
-      +'<button class="tr-x" data-idx="'+i+'" data-act="edit">Edit</button>'
-      +'<button class="tr-x" data-idx="'+i+'" data-act="del">×</button>'
-      +'</div>';
-  }
-  box.innerHTML=html;
-}
-
-// Load a stored trade back into the Log form (for re-export via the existing
-// Copy/PNG buttons). Re-export itself is unchanged — no copyForSheet refactor.
-function loadTradeIntoForm(idx){
-  var t=trades[idx]; if(!t) return;
-  $('btId').value = t.btId!=null ? t.btId : '';
-  $('pl').value   = t.pool!=null ? t.pool : '';
-  $('ast').value  = t.asset!=null ? t.asset : '';
-  $('ses').value  = t.session!=null ? t.session : '';
-  $('ent').value  = t.entry!=null ? t.entry : '';
-  $('slo').value  = t.sl!=null ? t.sl : '';
-  $('tpr').value  = t.tp!=null ? t.tp : '';
-  $('vol').value  = t.vol!=null ? t.vol : '';
-  if(t.setup!=null) $('stp').value = t.setup;
-  $('nte').value  = t.note!=null ? t.note : '';
-
-  setMode(t.mode==='backtest'?'backtest':'live');           // also toggles #btf visibility
-  setDirection(t.direction==='Short'?'Short':'Long', true); // pin the stored direction
-
-  // Risk: match a preset option value, else fall back to the custom field.
-  var rskEl=$('rsk'), preset=false, rv=String(t.risk);
-  for(var i=0;i<rskEl.options.length;i++){
-    if(rskEl.options[i].value!=='custom' && rskEl.options[i].value===rv){ preset=true; break; }
-  }
-  if(preset){
-    rskEl.value=rv;
-    $('rskCustomWrap').style.display='none';
-  } else {
-    rskEl.value='custom';
-    $('rskCustom').value=rv;
-    $('rskCustomWrap').style.display='block';
-  }
-
-  update();
-  toast('Loaded into form ✓');
-}
-
-function onTradeListClick(e){
-  var btn=e.target.closest ? e.target.closest('[data-act]') : null;
-  if(!btn) return;
-  var idx=parseInt(btn.getAttribute('data-idx'),10);
-  if(isNaN(idx)) return;
-  var act=btn.getAttribute('data-act');
-  if(act==='edit'){
-    loadTradeIntoForm(idx);
-  } else if(act==='del'){
-    if(confirm('Delete this logged trade?')){
-      trades.splice(idx,1);
-      saveTrades(trades);
-      renderTrades();
-    }
-  }
-}
-
-function logTrade(){
-  trades.push(collectTrade());
-  saveTrades(trades);
-  renderTrades();
-  toast('Trade logged ✓');
-}
-
 /* ---------- Wiring ---------- */
 
 function on(id, evt, fn){ var el=$(id); if(el) el.addEventListener(evt, fn); }
@@ -1268,10 +1141,6 @@ function bind(){
   on('fbk','input',update);
   on('cpb','click',copyForSheet);
   on('exb','click',exportPng);
-
-  // trade history
-  on('logTradeBtn','click',logTrade);
-  on('tradeList','click',onTradeListClick);
 }
 
 /* ---------- Init ---------- */
@@ -1286,8 +1155,6 @@ function init(){
   // loadState() supplies it when prior inputs exist.
   if(!loadState()) onInstrumentChange();
   update();
-  trades = loadTrades();
-  renderTrades();
   registerServiceWorker();
 }
 
