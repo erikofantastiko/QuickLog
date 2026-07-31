@@ -146,6 +146,33 @@ function eq(actual, expected, msg) {
 eq(M.SHEET_COLUMNS.live.length, 23, 'SHEET_COLUMNS.live length must be 23');
 eq(M.SHEET_COLUMNS.backtest.length, 28, 'SHEET_COLUMNS.backtest length must be 28');
 
+// 1b. Formula columns M/N/O/P (PnL %, Risk/Reward, R Ergebnis, Kumulatives R) must
+//     stay EMPTY — anything pasted there overwrites the sheet's own formula. N used
+//     to carry the computed rr; that was the regression this pins down.
+const LIVE = M.SHEET_COLUMNS.live;
+const colIdx = (letter) => letter.charCodeAt(0) - 'A'.charCodeAt(0);
+for (const letter of ['A', 'M', 'N', 'O', 'P']) {
+  eq(LIVE[colIdx(letter)], '', `live column ${letter} must stay '' (sheet-filled / formula)`);
+}
+ok(!LIVE.includes('rr'), 'live mapping must NOT export a computed rr into any column');
+
+// 1c. Every live column key sits at its documented spreadsheet letter.
+const LIVE_MAP = {
+  B: 'dt', C: 'asset', D: 'screenshot', E: 'entry', F: 'exit', G: 'sl', H: 'tp',
+  I: 'vol', J: 'risk', K: 'riskUsd', L: 'pnlUsd', Q: 'dir', R: 'session',
+  S: 'result', T: 'note', U: 'management', V: 'emotions', W: 'feedback'
+};
+for (const [letter, key] of Object.entries(LIVE_MAP)) {
+  eq(LIVE[colIdx(letter)], key, `live column ${letter} must map to '${key}'`);
+}
+
+// 1d. Backtest = 5 prepended BT columns + the 23 live columns, aligned 1:1. If the
+//     two mappings ever drift apart the same row would land in different columns.
+eq(M.SHEET_COLUMNS.backtest.slice(5).join('|'), LIVE.join('|'),
+   'backtest columns 6..28 must equal the live mapping verbatim');
+eq(M.SHEET_COLUMNS.backtest.slice(0, 5).join('|'), 'btId|pool|date||',
+   'backtest must prepend [btId, pool, date, "", ""]');
+
 // sanity: presets were actually found
 ok(!!EURUSD && !!USDJPY, 'EUR/USD and USD/JPY presets must exist in PRESETS.ftmo');
 ok(!!USDCAD && !!EURGBP, 'USD/CAD and EUR/GBP presets must exist in PRESETS.ftmo');

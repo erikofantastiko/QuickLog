@@ -231,6 +231,61 @@
     <input type="text" id="nte" placeholder="H1 FVG after sweep, DXY divergence...">
   </div>
 
+  <div class="sp"></div>
+
+  <div class="ar" style="margin-bottom:0">
+    <button class="bt" id="extrasToggle" aria-expanded="false" aria-controls="extrasWrap">Sheet extras (optional) ▾</button>
+  </div>
+
+  <!-- Optional sheet columns (D/F/K/L/S/U/V/W). Empty fields copy as empty cells. -->
+  <div id="extrasWrap" style="display:none;margin-top:20px">
+    <div class="fi">
+      <label>Setup Screenshot <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(URL)</span></label>
+      <input type="text" id="shot" placeholder="https://www.tradingview.com/x/...">
+    </div>
+
+    <div class="r2">
+      <div class="fi">
+        <label>Exit</label>
+        <input type="text" id="exi" placeholder="1.09500" style="font-family:var(--mn)">
+      </div>
+      <div class="fi">
+        <label>Ergebnis</label>
+        <select id="res">
+          <option value="">—</option><option>Win</option><option>Lose</option><option>Breakeven</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="r2">
+      <div class="fi">
+        <label>Risk in $</label>
+        <input type="text" id="rskUsd" placeholder="250" style="font-family:var(--mn)">
+      </div>
+      <div class="fi">
+        <label>PnL ($)</label>
+        <input type="text" id="pnl" placeholder="500" style="font-family:var(--mn)">
+      </div>
+    </div>
+
+    <div class="fi">
+      <label>Trade Management</label>
+      <input type="text" id="mgmt" placeholder="SL auf BE nach 1R, Teilverkauf...">
+    </div>
+
+    <div class="fi">
+      <label>Emotionen</label>
+      <input type="text" id="emo" placeholder="Ruhig, kein FOMO...">
+    </div>
+
+    <div class="fi">
+      <label>Feedback</label>
+      <input type="text" id="fbk" placeholder="Entry zu früh, auf Retest warten...">
+    </div>
+
+    <div class="hint" style="margin-top:0">Alles optional — leere Felder bleiben leere Zellen (offene Trades OK). PnL&nbsp;(%), Risk/Reward, R&nbsp;Ergebnis und Kumulatives&nbsp;R rechnet das Sheet selbst.</div>
+  </div>
+
   <div class="ar">
     <button class="bt bp" id="logTradeBtn">Log Trade</button>
   </div>

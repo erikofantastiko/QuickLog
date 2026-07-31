@@ -57,11 +57,15 @@ var ACCOUNT_CCY = 'USD';
 
 // Column order for the Google Sheet export. Must stay byte-identical to
 // the downstream sheet layout — '' marks a column the sheet fills itself.
+// M/N/O/P (live indices 12-15) are SHEET FORMULA columns — PnL (%), Risk/Reward,
+// R Ergebnis, Kumulatives R. They must stay '' forever: pasting a static value
+// there overwrites the formula. rr is deliberately NOT exported anymore.
 var SHEET_COLUMNS = {
-  // live: [_, datetime, asset, _, entry, _, sl, tp, vol, risk, _, _, _, rr, _, _, dir, session, _, setup+note, _, _, _]
-  live:      ['', 'dt', 'asset', '', 'entry', '', 'sl', 'tp', 'vol', 'risk', '', '', '', 'rr', '', '', 'dir', 'session', '', 'note', '', '', ''],
-  // backtest: [btId, pool, date, _, _, _, datetime, asset, _, entry, _, sl, tp, vol, risk, _, _, _, rr, _, _, dir, session, _, setup+note, _, _, _]
-  backtest:  ['btId', 'pool', 'date', '', '', '', 'dt', 'asset', '', 'entry', '', 'sl', 'tp', 'vol', 'risk', '', '', '', 'rr', '', '', 'dir', 'session', '', 'note', '', '', '']
+  // live A..W: [_, datetime, asset, screenshot, entry, exit, sl, tp, vol, risk, riskUsd, pnlUsd, =, =, =, =, dir, session, result, setup+note, management, emotions, feedback]
+  live:      ['', 'dt', 'asset', 'screenshot', 'entry', 'exit', 'sl', 'tp', 'vol', 'risk', 'riskUsd', 'pnlUsd', '', '', '', '', 'dir', 'session', 'result', 'note', 'management', 'emotions', 'feedback'],
+  // backtest = 5 prepended BT columns [btId, pool, date, _, _] + the 23 live columns, aligned 1:1.
+  backtest:  ['btId', 'pool', 'date', '', '',
+              '', 'dt', 'asset', 'screenshot', 'entry', 'exit', 'sl', 'tp', 'vol', 'risk', 'riskUsd', 'pnlUsd', '', '', '', '', 'dir', 'session', 'result', 'note', 'management', 'emotions', 'feedback']
 };
 
 var STORAGE_KEY = 'quicklog';
@@ -69,7 +73,9 @@ var STORAGE_KEY = 'quicklog';
 // Inputs/selects whose raw value is persisted verbatim.
 var PERSISTED_FIELDS = [
   'brk','accPreset','accCustom','inst','szRisk','szRiskCustom','cv','szEntry','szSL','szTP','feedInput',
-  'btId','pl','ast','ses','rsk','rskCustom','ent','slo','tpr','vol','stp','nte'
+  'btId','pl','ast','ses','rsk','rskCustom','ent','slo','tpr','vol','stp','nte',
+  // Sheet extras (optional) — columns D/F/K/L/S/U/V/W.
+  'shot','exi','rskUsd','pnl','res','mgmt','emo','fbk'
 ];
 
 /* ---------- State ---------- */
@@ -79,6 +85,7 @@ var state = {
   mode:'live',        // 'live' | 'backtest'
   tab:'size',         // 'size' | 'log'
   chartOpen:false,
+  extrasOpen:false,   // "Sheet extras (optional)" section in the Trade Log
   feedOverride:'',
   cvManual:false,     // true once the user types into the Contract Value field
   dirManual:false,    // true once the user clicks Long/Short; auto-detect from entry vs SL until then
@@ -271,6 +278,10 @@ function readCard(){
     tp:      $('tpr').value||'—',
     note:    $('nte').value,
     rr:      logRR(),
+    // Optional sheet extras — rendered on the card only when filled.
+    exit:    $('exi').value,
+    result:  $('res').value,
+    riskUsd: $('rskUsd').value,
     isLong:  state.direction==='Long',
     date:    today()
   };
@@ -296,12 +307,21 @@ function cardHtml(d){
   function big(label,val,color){
     return '<div style="background:#0c0c0e;border-radius:8px;padding:12px 14px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:#56565c;margin-bottom:4px">'+label+'</div><div style="font-size:24px;font-weight:600;font-family:monospace;color:'+color+'">'+val+'</div></div>';
   }
+  // Optional extras (Exit / Ergebnis / Risk $) — only the filled ones get a cell,
+  // so an open trade keeps the card free of empty placeholders.
+  var extras='';
+  if(d.exit)    extras+=cell('Exit',esc(d.exit));
+  if(d.result)  extras+=cell('Ergebnis',esc(d.result));
+  if(d.riskUsd) extras+=cell('Risk $',esc(d.riskUsd));
+  var extrasRow = extras ? '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">'+extras+'</div>' : '';
+
   return '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">'
     +'<div><div style="font-size:24px;font-weight:600;color:#e4e4e7">'+esc(d.asset)+'</div><div style="font-size:13px;color:#8a8a90;margin-top:4px">'+d.session+' · '+d.setup+'</div></div>'
     +'<div style="text-align:right"><span style="display:inline-block;padding:4px 12px;border-radius:10px;font-size:13px;font-weight:600;background:'+badgeBg+';color:'+badgeFg+'">'+badgeTx+'</span><div style="font-size:11px;color:#56565c;margin-top:6px">'+d.date+'</div></div></div>'
     +'<div style="height:1px;background:#2a2a2e;margin:14px 0"></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'+cell('Entry',esc(d.entry))+cell('Stop loss',esc(d.sl))+cell('Take profit',esc(d.tp))+'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+big('R:R',d.rr?d.rr+'R':'—',rrColor)+big('Risk',d.risk+'%','#e4e4e7')+'</div>'
+    +extrasRow
     +(d.note?'<div style="margin-top:12px;padding:10px 12px;background:#0c0c0e;border-radius:8px;font-size:13px;color:#8a8a90;font-style:italic">'+esc(d.note)+'</div>':'');
 }
 
@@ -375,21 +395,30 @@ function copyForSheet(){
   var n=new Date();
   var datetime=n.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+n.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
   var setup=$('stp').value, note=$('nte').value;
+  // Optional extras stay verbatim: an empty field copies as an empty cell, so an
+  // open trade pastes cleanly. No computed rr/R here — M/N/O/P are sheet formulas.
   var values={
-    btId:    $('btId').value,
-    pool:    $('pl').value,
-    date:    today(),
-    dt:      datetime,
-    asset:   $('ast').value,
-    entry:   $('ent').value,
-    sl:      $('slo').value,
-    tp:      $('tpr').value,
-    vol:     $('vol').value,
-    risk:    getLogRisk()+'%',
-    rr:      logRR()||'',
-    dir:     state.direction,
-    session: $('ses').value,
-    note:    setup+(note?' – '+note:'')
+    btId:       $('btId').value,
+    pool:       $('pl').value,
+    date:       today(),
+    dt:         datetime,
+    asset:      $('ast').value,
+    screenshot: $('shot').value,
+    entry:      $('ent').value,
+    exit:       $('exi').value,
+    sl:         $('slo').value,
+    tp:         $('tpr').value,
+    vol:        $('vol').value,
+    risk:       getLogRisk()+'%',
+    riskUsd:    $('rskUsd').value,
+    pnlUsd:     $('pnl').value,
+    dir:        state.direction,
+    session:    $('ses').value,
+    result:     $('res').value,
+    note:       setup+(note?' – '+note:''),
+    management: $('mgmt').value,
+    emotions:   $('emo').value,
+    feedback:   $('fbk').value
   };
   var cols=SHEET_COLUMNS[state.mode];
   var row=cols.map(function(key){ return key?(values[key]||''):''; });
@@ -962,6 +991,22 @@ function toggleChart(){
   saveState();
 }
 
+// "Sheet extras (optional)" section in the Trade Log. Pure disclosure — the
+// fields keep their values (and keep exporting) whether the section is open.
+function applyExtrasOpen(){
+  var w=$('extrasWrap'), b=$('extrasToggle');
+  if(w) w.style.display=state.extrasOpen?'block':'none';
+  if(b){
+    b.textContent=state.extrasOpen?'Sheet extras (optional) ▴':'Sheet extras (optional) ▾';
+    b.setAttribute('aria-expanded', state.extrasOpen?'true':'false');
+  }
+}
+function toggleExtras(){
+  state.extrasOpen=!state.extrasOpen;
+  applyExtrasOpen();
+  saveState();
+}
+
 /* ---------- Persistence ---------- */
 
 function saveState(){
@@ -972,7 +1017,7 @@ function saveState(){
       v:1, fields:fields,
       state:{
         direction:state.direction, mode:state.mode, tab:state.tab,
-        chartOpen:state.chartOpen, feedOverride:state.feedOverride,
+        chartOpen:state.chartOpen, extrasOpen:state.extrasOpen, feedOverride:state.feedOverride,
         cvManual:state.cvManual, dirManual:state.dirManual,
         chartInterval:state.chartInterval
       }
@@ -1018,6 +1063,8 @@ function loadState(){
   $('szRiskCustomWrap').style.display=$('szRisk').value==='custom'?'block':'none';
   $('rskCustomWrap').style.display=$('rsk').value==='custom'?'block':'none';
   $('btf').style.display=state.mode==='backtest'?'block':'none';
+  state.extrasOpen=!!s.extrasOpen;
+  applyExtrasOpen();
 
   if(s.chartOpen){
     state.chartOpen=true;
@@ -1208,6 +1255,17 @@ function bind(){
   on('vol','input',update);
   on('stp','change',update);
   on('nte','input',update);
+  // sheet extras (optional) — only exit/res/rskUsd reach the card, but every
+  // field must go through update() so saveState() persists it.
+  on('extrasToggle','click',toggleExtras);
+  on('shot','input',update);
+  on('exi','input',update);
+  on('res','change',update);
+  on('rskUsd','input',update);
+  on('pnl','input',update);
+  on('mgmt','input',update);
+  on('emo','input',update);
+  on('fbk','input',update);
   on('cpb','click',copyForSheet);
   on('exb','click',exportPng);
 
