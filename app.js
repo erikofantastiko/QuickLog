@@ -85,7 +85,7 @@ var state = {
   mode:'live',        // 'live' | 'backtest'
   tab:'size',         // 'size' | 'log'
   chartOpen:false,
-  extrasOpen:false,   // "Sheet extras (optional)" section in the Trade Log
+  extrasOpen:true,    // "Sheet extras (optional)" section in the Trade Log — open by default
   feedOverride:'',
   cvManual:false,     // true once the user types into the Contract Value field
   dirManual:false,    // true once the user clicks Long/Short; auto-detect from entry vs SL until then
@@ -1063,7 +1063,7 @@ function loadState(){
   $('szRiskCustomWrap').style.display=$('szRisk').value==='custom'?'block':'none';
   $('rskCustomWrap').style.display=$('rsk').value==='custom'?'block':'none';
   $('btf').style.display=state.mode==='backtest'?'block':'none';
-  state.extrasOpen=!!s.extrasOpen;
+  if(s.extrasOpen!=null) state.extrasOpen=!!s.extrasOpen;
   applyExtrasOpen();
 
   if(s.chartOpen){
