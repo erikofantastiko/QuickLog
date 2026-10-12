@@ -18,31 +18,31 @@ var $ = function(id){ return document.getElementById(id); };
 // (USD is the base, e.g. USD/JPY, USD/CAD), a flagged cross-rate approximation otherwise.
 var PRESETS = {
   ftmo:[
-    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURUSD'},
-    {s:'GBP/USD',base:'GBP',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:GBPUSD'},
-    {s:'USD/JPY',base:'USD',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:USDJPY'},
-    {s:'EUR/JPY',base:'EUR',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:EURJPY'},
-    {s:'GBP/JPY',base:'GBP',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:GBPJPY'},
-    {s:'EUR/GBP',base:'EUR',quote:'GBP',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURGBP'},
-    {s:'AUD/USD',base:'AUD',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:AUDUSD'},
-    {s:'USD/CAD',base:'USD',quote:'CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ CAD price)',tv:'OANDA:USDCAD'},
-    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:NAS100USD'},
-    {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:SPX500USD'},
-    {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD'},
-    {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',tv:'OANDA:XAGUSD'},
-    {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',tv:'BITSTAMP:BTCUSD'},
-    {s:'ETH/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',tv:'BITSTAMP:ETHUSD'},
+    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.5,2],tv:'OANDA:EURUSD'},
+    {s:'GBP/USD',base:'GBP',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.6,2.5],tv:'OANDA:GBPUSD'},
+    {s:'USD/JPY',base:'USD',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[50,300],tv:'OANDA:USDJPY'},
+    {s:'EUR/JPY',base:'EUR',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[50,300],tv:'OANDA:EURJPY'},
+    {s:'GBP/JPY',base:'GBP',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[80,400],tv:'OANDA:GBPJPY'},
+    {s:'EUR/GBP',base:'EUR',quote:'GBP',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.5,1.5],tv:'OANDA:EURGBP'},
+    {s:'AUD/USD',base:'AUD',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.3,1.5],tv:'OANDA:AUDUSD'},
+    {s:'USD/CAD',base:'USD',quote:'CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ CAD price)',band:[0.8,2],tv:'OANDA:USDCAD'},
+    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',band:[2000,100000],tv:'OANDA:NAS100USD'},
+    {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',band:[1000,30000],tv:'OANDA:SPX500USD'},
+    {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',band:[500,20000],tv:'OANDA:XAUUSD'},
+    {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',band:[5,500],tv:'OANDA:XAGUSD'},
+    {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',band:[1000,10000000],tv:'BITSTAMP:BTCUSD'},
+    {s:'ETH/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',band:[100,100000],tv:'BITSTAMP:ETHUSD'},
     {s:'Custom…',cv:'',unit:'lots',step:0.01,hint:'enter contract value manually',tv:''}
   ],
   breakout:[
-    {s:'BTC',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:BTCUSD'},
-    {s:'ETH',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:ETHUSD'},
-    {s:'SOL',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:SOLUSD'},
-    {s:'XRP',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:XRPUSD'},
-    {s:'ADA',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:ADAUSD'},
-    {s:'AVAX',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:AVAXUSD'},
-    {s:'LINK',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:LINKUSD'},
-    {s:'DOGE',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:DOGEUSD'},
+    {s:'BTC',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1000,10000000],tv:'KRAKEN:BTCUSD'},
+    {s:'ETH',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[100,100000],tv:'KRAKEN:ETHUSD'},
+    {s:'SOL',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1,5000],tv:'KRAKEN:SOLUSD'},
+    {s:'XRP',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.05,100],tv:'KRAKEN:XRPUSD'},
+    {s:'ADA',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.01,50],tv:'KRAKEN:ADAUSD'},
+    {s:'AVAX',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1,1000],tv:'KRAKEN:AVAXUSD'},
+    {s:'LINK',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.5,1000],tv:'KRAKEN:LINKUSD'},
+    {s:'DOGE',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.001,10],tv:'KRAKEN:DOGEUSD'},
     {s:'Custom…',cv:1,unit:'coins',step:0.001,hint:'perp · size in coins',tv:''}
   ],
   custom:[{s:'Custom',cv:'',unit:'units',step:0.01,hint:'enter contract value manually',tv:''}]
@@ -95,7 +95,34 @@ var state = {
 
 /* ---------- Utils ---------- */
 
-function parseNum(v){ return parseFloat(String(v).replace(',','.')); }
+// Parse a user-typed number. Never guesses silently: anything it can't read
+// unambiguously is NaN, which the callers treat as "no result" (no mis-sizing).
+//   '.' or ',' as decimal; spaces/apostrophes as thousands ('1 234,5', "1'234.5").
+//   Both '.' and ',' → the LAST one is the decimal, the other must group by 3
+//   ('20,150.5', '1.234,5'). Several ',' only → thousands ('1,234,567').
+//   A lone ',' + exactly 3 digits ('20,150', '1,085') is AMBIGUOUS (20150 or 20.15):
+//   resolved by `band` [min,max] (the instrument's plausible price range) when
+//   exactly one reading falls inside it, else NaN. Garbage ('1.2.3', '20abc') → NaN.
+function parseNum(v, band){
+  var s=String(v==null?'':v).trim().replace(/[\s'  ]/g,'');
+  if(!s) return NaN;
+  var dot=s.lastIndexOf('.'), com=s.lastIndexOf(',');
+  if(dot>=0 && com>=0){
+    if(com>dot){ if(!/^[+-]?\d{1,3}(\.\d{3})+,\d+$/.test(s)) return NaN; s=s.replace(/\./g,'').replace(',','.'); }
+    else       { if(!/^[+-]?\d{1,3}(,\d{3})+\.\d+$/.test(s)) return NaN; s=s.replace(/,/g,''); }
+  } else if(com>=0){
+    if(s.indexOf(',')!==com){ if(!/^[+-]?\d{1,3}(,\d{3})+$/.test(s)) return NaN; s=s.replace(/,/g,''); }
+    else if(/^[+-]?[1-9]\d{0,2},\d{3}$/.test(s)){
+      var asDec=Number(s.replace(',','.')), asThou=Number(s.replace(',',''));
+      var inB=function(x){ return !!band && x>=band[0] && x<=band[1]; };
+      if(inB(asDec)!==inB(asThou)) return inB(asDec)?asDec:asThou;
+      return NaN;
+    }
+    else s=s.replace(',','.');
+  }
+  if(!/^[+-]?(\d+\.?\d*|\.\d+)$/.test(s)) return NaN;
+  return Number(s);
+}
 function today(){ return new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}); }
 
 // Escape free user text before it goes into innerHTML (Preview + PNG share cardHtml).
@@ -135,6 +162,33 @@ function currentPreset(){
   return list.find(function(x){return x.s===name;});
 }
 
+// Preset matching a Trade Log asset string ('EUR/USD', 'US100', 'BTC'), across
+// all brokers — sendToLog writes the preset name upper-cased minus '(NDX)'.
+function presetForAsset(asset){
+  var a=String(asset||'').toUpperCase().replace(/\s*\(.*\)/,'').trim();
+  if(!a) return null;
+  var hit=null;
+  Object.keys(PRESETS).forEach(function(k){
+    PRESETS[k].forEach(function(p){
+      if(!hit && p.band && p.s.toUpperCase().replace(/\s*\(.*\)/,'').trim()===a) hit=p;
+    });
+  });
+  return hit;
+}
+
+// Plausible range per input, used ONLY to resolve an ambiguous '20,150'-style
+// number (see parseNum). Sizer prices → current preset; Log prices → preset of
+// the typed asset; account/risk → generic ranges; anything else → none (NaN).
+function bandFor(id){
+  if(id==='szEntry'||id==='szSL'||id==='szTP'){ var p=currentPreset(); return p&&p.band||null; }
+  if(id==='ent'||id==='slo'||id==='tpr'||id==='exi'){ var q=presetForAsset($('ast').value); return q?q.band:null; }
+  if(id==='accCustom') return [1000,1e9];
+  if(id==='szRiskCustom'||id==='rskCustom') return [0.001,100];
+  return null;
+}
+// Read an input by id through parseNum with its band.
+function numOf(id){ return parseNum($(id).value, bandFor(id)); }
+
 /* ---------- Sizer ---------- */
 
 // Tradeable volume step for the current instrument (lots/coins).
@@ -159,7 +213,7 @@ function stepDecimals(){ var st=String(stepFor()); var i=st.indexOf('.'); return
 function contractValueFor(preset, entryStr){
   if(!preset) return NaN;
   if(preset.quote && preset.quote!==ACCOUNT_CCY){
-    var e=parseNum(entryStr);
+    var e=parseNum(entryStr, preset.band);
     if(isNaN(e)||e<=0) return NaN;
     return FX_LOT/e;
   }
@@ -191,17 +245,17 @@ function syncContractValue(){
 // Sizer risk %: 'custom' select value falls back to the free-text field,
 // mirroring getAccount()'s preset/custom split.
 function getSizerRisk(){
-  if($('szRisk').value==='custom') return parseNum($('szRiskCustom').value);
+  if($('szRisk').value==='custom') return numOf('szRiskCustom');
   return parseFloat($('szRisk').value);
 }
 
 function calcSize(){
   var acc=getAccount(),
       risk=getSizerRisk(),
-      e=parseNum($('szEntry').value),
-      s=parseNum($('szSL').value),
-      t=parseNum($('szTP').value),
-      cv=parseNum($('cv').value);
+      e=numOf('szEntry'),
+      s=numOf('szSL'),
+      t=numOf('szTP'),
+      cv=numOf('cv');
   if(isNaN(acc)||isNaN(risk)||isNaN(e)||isNaN(s)||isNaN(cv)||e===s||cv<=0) return null;
   var riskAmt=acc*(risk/100);
   var dist=Math.abs(e-s);
@@ -223,7 +277,11 @@ function renderSize(){
   var unit=p?p.unit:'lots';
   var r=calcSize();
   var out=$('szOut');
-  if(!r){ out.innerHTML='<div style="color:var(--tx3);text-align:center;padding:8px">Enter account, entry, stop &amp; contract value</div>'; return; }
+  // Typed but unreadable/ambiguous numbers (parseNum → NaN) get named, so a
+  // field never just silently drops out of the calculation.
+  var bad=unreadableSizerFields();
+  var badWarn = bad.length ? '<div class="sz-warn">Can\'t read '+bad.map(esc).join(', ')+' — ambiguous or invalid number. Use a dot for decimals, no thousands commas (e.g. 20150 or 20.15)</div>' : '';
+  if(!r){ out.innerHTML=(badWarn||'<div style="color:var(--tx3);text-align:center;padding:8px">Enter account, entry, stop &amp; contract value</div>'); return; }
   // Floor the raw volume to the tradeable step before display/transfer; raw
   // sizing math (calcSize) stays untouched. rv==0 means vol < one step.
   var rv=roundVol(r.vol), st=stepFor();
@@ -247,12 +305,26 @@ function renderSize(){
     +'<div class="sz-cell"><div class="cpl">Risk</div><div class="cpv">$'+r.riskAmt.toFixed(0)+'</div></div>'
     +'<div class="sz-cell"><div class="cpl">SL Distance</div><div class="cpv">'+r.dist.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')+'</div></div>'
     +'<div class="sz-cell"><div class="cpl">Reward</div><div class="cpv">'+(r.rewardAmt?'$'+r.rewardAmt.toFixed(0):'—')+'</div></div>'
-    +'</div>'+warn;
+    +'</div>'+badWarn+warn;
+}
+
+// Sizer inputs that hold text but don't parse (parseNum → NaN), as display
+// names with the raw value. Custom account/risk only count when selected.
+function unreadableSizerFields(){
+  var defs=[['szEntry','Entry'],['szSL','Stop Loss'],['szTP','Take Profit'],['cv','Contract Value']];
+  if($('accPreset').value==='custom') defs.unshift(['accCustom','Account']);
+  if($('szRisk').value==='custom') defs.unshift(['szRiskCustom','Risk %']);
+  var out=[];
+  defs.forEach(function(d){
+    var raw=$(d[0]).value.trim();
+    if(raw && isNaN(parseNum(raw, bandFor(d[0])))) out.push(d[1]+' "'+raw+'"');
+  });
+  return out;
 }
 
 function getAccount(){
   var v=$('accPreset').value;
-  if(v==='custom') return parseNum($('accCustom').value)||0;
+  if(v==='custom') return numOf('accCustom')||0;
   return parseFloat(v);
 }
 
@@ -260,7 +332,7 @@ function getAccount(){
 // the bare value (no '%') — copyForSheet/cardHtml append the unit. The sheet
 // column ORDER is unchanged; only the value source switches for custom.
 function getLogRisk(){
-  if($('rsk').value==='custom') return parseNum($('rskCustom').value);
+  if($('rsk').value==='custom') return numOf('rskCustom');
   return $('rsk').value;
 }
 
@@ -288,7 +360,7 @@ function readCard(){
 }
 
 function logRR(){
-  var e=parseNum($('ent').value), s=parseNum($('slo').value), t=parseNum($('tpr').value);
+  var e=numOf('ent'), s=numOf('slo'), t=numOf('tpr');
   if(isNaN(e)||isNaN(s)||isNaN(t)||s===e) return null;
   return (Math.abs(t-e)/Math.abs(e-s)).toFixed(2);
 }
@@ -335,7 +407,7 @@ function readSizer(){
   if(!r) return null;
   var p=currentPreset();
   var brkEl=$('brk'), brkLabel=(brkEl && brkEl.selectedIndex>=0) ? brkEl.options[brkEl.selectedIndex].text : brkEl.value;
-  var e=parseNum($('szEntry').value), s=parseNum($('szSL').value);
+  var e=numOf('szEntry'), s=numOf('szSL');
   return {
     instrument: $('inst').value||'—',
     broker:     brkLabel,
@@ -520,7 +592,7 @@ function setDirection(d, manual){
 // Does NOT touch dirManual and does NOT call update() — the caller updates.
 function maybeAutoDirection(){
   if(state.dirManual) return;
-  var e=parseNum($('ent').value), s=parseNum($('slo').value);
+  var e=numOf('ent'), s=numOf('slo');
   if(isNaN(e)||isNaN(s)||e===s) return;
   var d=e>s?'Long':'Short';
   state.direction=d;
@@ -933,7 +1005,7 @@ function applyCryptoLevels(){
   ];
   defs.forEach(function(d){
     var el=$(d.id); if(!el) return;
-    var v=parseNum(el.value);
+    var v=numOf(d.id);
     if(isNaN(v)) return;
     try{
       var line=l.series.createPriceLine({

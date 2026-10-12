@@ -95,6 +95,11 @@ const pieces = [
   extractFn('parseNum'),
   extractFn('contractValueFor'),
   extractFn('currentPreset'),
+  // parseNum's ambiguity resolution needs the instrument band: calcSize & co read
+  // inputs through numOf → bandFor → currentPreset/presetForAsset.
+  extractFn('presetForAsset'),
+  extractFn('bandFor'),
+  extractFn('numOf'),
   extractFn('stepFor'),
   extractFn('roundVol'),
   extractFn('stepDecimals'),
@@ -113,7 +118,7 @@ const $ = (id) => ({ value: id in fields ? fields[id] : '' });
 
 const factory = new Function('$', 'fields', `
   ${pieces.join('\n')}
-  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize };
+  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize };
 `);
 const M = factory($, fields);
 
@@ -252,6 +257,59 @@ setFields({ accPreset: '100000', szRisk: '0.25', szEntry: '1.10', szSL: '1.09', 
 r = M.calcSize();
 ok(r !== null && r.tpWrongSide === false, 'Long TP above entry is not wrong-side');
 approx(r.rr, 2, 1e-9, 'rr ~= 2 for TP 1.12 vs entry 1.10, stop 1.09');
+
+// 6. parseNum — never a silent mis-read. The old parseNum turned '20,150' into 20.15
+//    (US100 sized 1000x too large). Unambiguous formats parse; ambiguous/garbage → NaN.
+const nan = (v, msg) => ok(Number.isNaN(v), msg + ` (got ${v}, want NaN)`);
+eq(M.parseNum('1.08500'), 1.085, "parseNum('1.08500') == 1.085");
+eq(M.parseNum('1,08500'), 1.085, "parseNum('1,08500') == 1.085 (comma decimal)");
+eq(M.parseNum('20150'), 20150, "parseNum('20150') == 20150");
+eq(M.parseNum('20,150.5'), 20150.5, "parseNum('20,150.5') == 20150.5 (US thousands)");
+eq(M.parseNum('20.150,5'), 20150.5, "parseNum('20.150,5') == 20150.5 (EU thousands)");
+eq(M.parseNum('1 234,5'), 1234.5, "parseNum('1 234,5') == 1234.5 (space thousands)");
+eq(M.parseNum("1'234.5"), 1234.5, "parseNum(\"1'234.5\") == 1234.5 (apostrophe thousands)");
+eq(M.parseNum('1,234,567'), 1234567, "parseNum('1,234,567') == 1234567");
+eq(M.parseNum('0,125'), 0.125, "parseNum('0,125') == 0.125 (leading 0 → decimal, not ambiguous)");
+eq(M.parseNum('2650,5'), 2650.5, "parseNum('2650,5') == 2650.5");
+nan(M.parseNum('20,150'), "parseNum('20,150') without band is ambiguous → NaN");
+nan(M.parseNum('1,085'), "parseNum('1,085') without band is ambiguous → NaN");
+nan(M.parseNum('1.2.3'), "parseNum('1.2.3') → NaN");
+nan(M.parseNum('20abc'), "parseNum('20abc') → NaN (old parseFloat read 20)");
+nan(M.parseNum('1,08,500'), "parseNum('1,08,500') → NaN (bad grouping)");
+nan(M.parseNum(''), "parseNum('') → NaN");
+nan(M.parseNum('0x10'), "parseNum('0x10') → NaN");
+
+// 6b. Ambiguous '1,234' resolved by the instrument's price band (exactly one reading inside).
+const presetFtmo = (n) => M.PRESETS.ftmo.find((p) => p.s === n);
+eq(M.parseNum('150,125', presetFtmo('USD/JPY').band), 150.125, "USD/JPY band: '150,125' → 150.125");
+eq(M.parseNum('20,150', presetFtmo('US100 (NDX)').band), 20150, "US100 band: '20,150' → 20150");
+eq(M.parseNum('1,085', presetFtmo('EUR/USD').band), 1.085, "EUR/USD band: '1,085' → 1.085");
+eq(M.parseNum('2,650', presetFtmo('XAU/USD').band), 2650, "XAU band: '2,650' → 2650");
+eq(M.parseNum('32,125', presetFtmo('XAG/USD').band), 32.125, "XAG band: '32,125' → 32.125");
+nan(M.parseNum('500,000', [1, 1e9]), "band containing both readings → still NaN");
+// Band never changes an UNambiguous number, even outside the band.
+eq(M.parseNum('20.15', presetFtmo('US100 (NDX)').band), 20.15, 'band does not touch unambiguous input');
+
+// 6c. End to end through the real calcSize: US100 '20,150.5'/'20,100' sizes like 20150.5/20100,
+//     and the bare ambiguous '20,150' resolves via the band to the same size as '20150'.
+setFields({ brk: 'ftmo', inst: 'US100 (NDX)', accPreset: '100000', szRisk: '0.25',
+            szEntry: '20,150', szSL: '20,100', szTP: '', cv: '1' });
+r = M.calcSize();
+ok(r !== null, 'calcSize US100 with comma thousands returns a result');
+approx(r.vol, 250 / 50, 1e-9, "US100 '20,150'/'20,100' → 5 lots (was 5000 with the old parseNum)");
+setFields({ brk: 'custom', inst: 'Custom', accPreset: '100000', szRisk: '0.25',
+            szEntry: '20,150', szSL: '20,100', szTP: '', cv: '1' });
+eq(M.calcSize(), null, 'custom instrument (no band) + ambiguous entry → no result, never a guess');
+//    Log side: band comes from the typed asset.
+setFields({ ast: 'US100' });
+eq(M.bandFor('ent'), presetFtmo('US100 (NDX)').band, "bandFor('ent') follows the Log asset (US100)");
+setFields({ ast: 'BTC' });
+ok(Array.isArray(M.bandFor('ent')), "bandFor('ent') finds Breakout 'BTC'");
+setFields({ ast: 'FOO' });
+eq(M.bandFor('ent'), null, 'unknown asset → no band');
+//    Account custom '100,000' → 100000 (band [1000,1e9]).
+setFields({ accPreset: 'custom', accCustom: '100,000' });
+eq(M.getAccount(), 100000, "custom account '100,000' → 100000");
 
 /* =================== SUMMARY =================== */
 
