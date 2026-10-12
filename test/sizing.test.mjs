@@ -110,6 +110,7 @@ const pieces = [
   extractFn('calcSize'),
   extractVarScalar('TIGHT_SL_FRACTION'),
   extractFn('sizeChecks'),
+  extractFn('riskForVol'),
   // Trade Log side: R:R side check, custom-risk fallback, auto direction.
   extractFn('logRR'),
   extractFn('getLogRisk'),
@@ -127,7 +128,7 @@ const state = { direction: 'Long', dirManual: false };
 
 const factory = new Function('$', 'fields', 'state', `
   ${pieces.join('\n')}
-  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, sizeChecks, logRR, getLogRisk, maybeAutoDirection };
+  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, sizeChecks, riskForVol, logRR, getLogRisk, maybeAutoDirection };
 `);
 const M = factory($, fields, state);
 
@@ -380,6 +381,14 @@ for (const [brk, list] of Object.entries(M.PRESETS)) {
     ok(p.maxLev > 0, `${brk}/${p.s} has maxLev`);
   }
 }
+
+// 11. Risk $ handed to the log = real risk of the floored volume (≤ target).
+setFields({ brk: 'ftmo', inst: 'EUR/USD', accPreset: '100000', szRisk: '0.25',
+            szEntry: '1.08500', szSL: '1.08200', szTP: '', cv: '100000' });
+r = M.calcSize();
+const rvEur = M.roundVol(r.vol);
+approx(M.riskForVol(rvEur, r.dist, 100000), 0.83 * 0.003 * 100000, 1e-6, 'EUR/USD 0.83 lots × 30 pips → $249');
+ok(M.riskForVol(rvEur, r.dist, 100000) <= r.riskAmt + 1e-9, 'floored risk never exceeds target');
 
 /* =================== SUMMARY =================== */
 

@@ -282,6 +282,10 @@ function calcSize(){
   return {riskAmt:riskAmt,dist:dist,vol:vol,rr:rr,rewardAmt:rewardAmt,tpWrongSide:tpWrongSide};
 }
 
+// ACCOUNT_CCY at risk for a given (already step-rounded) volume: vol × dist × cv.
+// After the floor in roundVol this is ≤ the target riskAmt.
+function riskForVol(vol, dist, cv){ return vol*dist*cv; }
+
 // Plausibility of a size, for warnings only (the size itself is untouched).
 // notional = vol × cv × entry is the ACCOUNT_CCY exposure for every preset kind:
 // quote=USD (cv=FX_LOT → lots×100k×price), derived cv (FX_LOT/entry → lots×100k),
@@ -594,7 +598,12 @@ function sendToLog(){
   $('rsk').value=$('szRisk').value;
   if($('szRisk').value==='custom') $('rskCustom').value=$('szRiskCustom').value;
   $('rskCustomWrap').style.display=$('rsk').value==='custom'?'block':'none';
-  if(r) $('vol').value=roundVol(r.vol).toFixed(stepDecimals());
+  // Volume floored to the tradeable step, and the REAL risk of that volume
+  // (≤ target) into Sheet column K. No result → clear both, so the previous
+  // trade's numbers never ride along. Both stay editable.
+  var rv = r ? roundVol(r.vol) : 0;
+  $('vol').value    = r ? rv.toFixed(stepDecimals()) : '';
+  $('rskUsd').value = (r && rv>0) ? riskForVol(rv, r.dist, numOf('cv')).toFixed(2) : '';
   // A transfer is a new trade: drop any Long/Short pin from the previous one and
   // derive the direction from the transferred Entry/SL (fields were set without
   // input events, so the auto-detect would otherwise never run).
