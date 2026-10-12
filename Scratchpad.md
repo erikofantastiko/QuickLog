@@ -35,7 +35,7 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
 
 ## Backlog (priorisiert)
 
-### P0 — PWA / Offline-Umstellung  ·  Status: ✅ umgesetzt (Branch loop/p0-pwa, Verifier ausstehend)  ·  Aufwand: M
+### P0 — PWA / Offline-Umstellung  ·  Status: ✅ merged → main (e1e149f)  ·  Aufwand: M
 **Warum:** Installierbar am Homescreen, sofortiger Load, Kern (Sizer + Log + PNG) läuft offline /
 CDN-unabhängig. Ein Service Worker kann nicht inline sein → erzwingt Multi-File (= einziger echter
 Grund, Single-File aufzugeben).
@@ -64,7 +64,7 @@ R:R < 1, Entry == SL, unplausibel große Risk-Distanz. Fängt Fat-Finger ab, bev
 **Warum:** `fmtVol` formatiert nur die Anzeige; 0.833 Lots ist nicht handelbar, wenn der Step 0.01 ist.
 `step` pro Instrument ins Preset, Volume auf handelbaren Step **abrunden** (Risk bleibt ≤ Ziel).
 
-### P2 — Trade-History-Liste  ·  Status: ✅ merged → main (cc43ca4)  ·  Aufwand: M–L
+### P2 — Trade-History-Liste  ·  Status: ⛔ wieder entfernt (50a3fef, bewusste Entscheidung — nicht neu bauen)  ·  Aufwand: M–L
 **Warum:** Größter funktionaler Hebel. Aktuell überlebt nur das *eine* offene Formular. Geloggte Trades
 als Liste in localStorage: „Log Trade" hängt an, darunter Liste zum Ansehen/Bearbeiten/Löschen/
 Re-Export. „Copy for Sheet" ist dann nicht mehr der einzige Persistenz-Ort.
@@ -86,7 +86,7 @@ unverändert.
 - ✅ Custom-Risk-Feld (Sizer + Log) — merged → main (361391b); Test 20→25.
 - ✅ Sizer-Karte als PNG/Copy — merged → main (89d1755); shared `exportNodePng`-Helper.
 
-### P3 — Preisfelder escapen (entry/sl/tp)  ·  Status: offen  ·  Aufwand: S
+### P3 — Preisfelder escapen (entry/sl/tp)  ·  Status: ✅ erledigt (35a1668)  ·  Aufwand: S
 **Warum:** `cardHtml` UND `sizerCardHtml` rendern `entry`/`sl`/`tp` ungeescaped via `innerHTML`
 (`cell()`). P1 escapte bewusst nur asset/note. Self-XSS/Render-Bruch bei `<`/`&` in einem Preisfeld.
 **How:** `esc()` auf die Preisfelder in BEIDEN Karten gemeinsam anwenden (vom Verifier in p3-sizer-png notiert).
