@@ -557,6 +557,11 @@ function sendToLog(){
   if($('szRisk').value==='custom') $('rskCustom').value=$('szRiskCustom').value;
   $('rskCustomWrap').style.display=$('rsk').value==='custom'?'block':'none';
   if(r) $('vol').value=roundVol(r.vol).toFixed(stepDecimals());
+  // A transfer is a new trade: drop any Long/Short pin from the previous one and
+  // derive the direction from the transferred Entry/SL (fields were set without
+  // input events, so the auto-detect would otherwise never run).
+  state.dirManual=false;
+  maybeAutoDirection();
   setTab('log');
   update();
   toast('Sent to Trade Log ✓');
@@ -1188,7 +1193,7 @@ function bind(){
   on('bb','click',function(){ setMode('backtest'); });
   on('btId','input',update);
   on('pl','input',update);
-  on('ast','input',function(){ this.value=this.value.toUpperCase(); state.dirManual=false; update(); });
+  on('ast','input',function(){ this.value=this.value.toUpperCase(); state.dirManual=false; maybeAutoDirection(); update(); });
   on('blo','click',function(){ setDirection('Long', true); });
   on('bsh','click',function(){ setDirection('Short', true); });
   on('ses','change',update);
