@@ -614,6 +614,19 @@ function sendToLog(){
   toast('Sent to Trade Log ✓');
 }
 
+// Trade-specific Log fields. "New trade" clears exactly these, so last trade's
+// exit/result/PnL/emotions can't silently ride into the next sheet row. Kept on
+// purpose: mode, session, risk %, setup, backtest ID/pool (stable across trades).
+var TRADE_FIELDS = ['ast','ent','slo','tpr','vol','nte','shot','exi','rskUsd','pnl','res','mgmt','emo','fbk'];
+
+function newTrade(){
+  if(!window.confirm('Clear this trade (asset, levels, volume, note and sheet extras)?')) return;
+  TRADE_FIELDS.forEach(function(id){ var el=$(id); if(el) el.value=''; });
+  state.dirManual=false;
+  update();
+  toast('Cleared — ready for the next trade');
+}
+
 /* ---------- View switching ---------- */
 
 function setTab(t){
@@ -1265,6 +1278,7 @@ function bind(){
   on('fbk','input',update);
   on('cpb','click',copyForSheet);
   on('exb','click',exportPng);
+  on('newTrade','click',newTrade);
 }
 
 /* ---------- Init ---------- */
