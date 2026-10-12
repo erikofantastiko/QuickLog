@@ -19,6 +19,9 @@ card as an image via html2canvas).
 "Send to Trade Log →" carries sizer values into the log tab: levels, risk %, the step-rounded volume,
 the **real risk in $ of that volume** (Sheet column K) and the direction derived from Entry vs SL.
 
+If the log still holds a note or sheet extras from the previous trade, the transfer asks whether to
+clear them (Cancel keeps them, e.g. when re-sizing the same trade).
+
 "New trade (clear fields)" in the log empties asset, levels, volume, note and all sheet extras, so the
 previous trade's exit/result/PnL can't ride into the next sheet row. Mode, session, risk %, setup and
 backtest ID/pool stay.
@@ -32,7 +35,8 @@ Type prices the way you like; the parser never guesses silently:
 | `1.08500`, `1,08500` | 1.085 (dot or comma as decimal) |
 | `20150.5`, `20,150.5`, `20.150,5`, `20 150,5` | 20150.5 (thousands separators) |
 | `20,150` on US100 · `150,125` on USD/JPY | 20150 · 150.125 — a lone `,ddd` is ambiguous and resolved by the instrument's plausible price range |
-| `20,150` on a custom instrument, `1.2.3`, `20abc` | not read → the sizer shows *Can't read …* and no size |
+| `20,150` on a custom instrument, `1.2.3`, `20abc`, `20150 20100` | not read → the sizer shows *Can't read …* and no size |
+| `20.150` on US100 (dot as thousands) | 20.15 → red warning *outside the usual US100 range — check the decimal point* |
 
 On phones the number fields open the decimal keypad (PnL keeps the full keyboard for the minus sign).
 
@@ -43,6 +47,7 @@ The sizer flags, without changing the size:
 - **Leverage above the broker maximum** — exposure (`lots × cv × entry`) ÷ account above the
   instrument's `maxLev` (FTMO Standard: FX 1:100, metals 1:50, indices 1:50, crypto 1:3.3; Breakout:
   BTC 10x, ETH and listed alts 5x — researched 2026-10, Swing accounts are lower; verify).
+- **Entry / SL / TP outside the instrument's plausible range** — usually a misplaced decimal point.
 - **SL closer than 0.02 % of entry** — typical of a mistyped level that would size 10× too large.
 - TP on the wrong side, R:R below 1, below minimum step (as before).
 
@@ -179,7 +184,7 @@ the sheet — the mapping assumes it is gone.
 ## Stack
 
 - Version shown in the footer (`APP_VERSION` in `app.js`); changes in [CHANGELOG.md](CHANGELOG.md)
-- Tests: `node test/sizing.test.mjs` (money math, number parsing, sheet layout); GitHub Actions runs
+- Tests: `node test/sizing.test.mjs` (money math, number parsing, sheet layout); GitHub Actions (Node 22) runs
   it plus `node --check` on every push / PR (`.github/workflows/test.yml`)
 - Plain HTML/CSS/JS, no framework, no build step — `index.html` (markup) + `app.js` (one classic IIFE,
   not an ES module, so `file://` keeps working) + `styles.css`

@@ -36,7 +36,8 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
 - **1.0-Härtungslauf** (Branch `claude/quicklog-hardening`) — strenges Zahlenparsing mit
   Preis-Bändern (`20,150` sized nicht mehr 1000× zu groß), Richtung bei Send-to-Log, Log-R:R-Seite,
   kein `NaN%`, SW network-first + `APP_VERSION`, CI, Plausibilitätswarnungen (`maxLev`, enger SL),
-  Ziffernfeld, Label-`for`, Risk $ automatisch, „New trade". Tests 55→150. Verdicts in `loop/verdicts/`.
+  Ziffernfeld, Label-`for`, Risk $ automatisch, „New trade", Band-Warnung, Altdaten-Abfrage bei
+  Send to Log. Tests 55→182. Verdicts in `loop/verdicts/hardening-*.md`.
 
 ## Backlog (priorisiert)
 

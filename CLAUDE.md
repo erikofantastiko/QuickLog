@@ -56,12 +56,14 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Punkt/Komma als Dezimal, Leer/Apostroph/gruppierte Tausender ok, Müll → NaN. Einzelnes `,ddd`
   (`20,150`) ist mehrdeutig → per Preset-`band:[min,max]` aufgelöst, wenn genau eine Lesart drin liegt,
   sonst NaN (kein Ergebnis + „Can't read"-Hinweis). Bänder sind bewusst weit und lösen NUR
-  Mehrdeutiges auf, ändern nie eindeutige Eingaben.
+  Mehrdeutiges auf, ändern nie eindeutige Eingaben. Zusätzlich warnt der Sizer, wenn ein Level
+  außerhalb des Bands liegt (`outsideBand`, fängt `20.150` = 20,15 auf US100).
 - **Plausibilität = nur Warnung.** `sizeChecks`: Hebel `vol×cv×entry/account` > Preset-`maxLev` bzw.
   SL < 0,02 % vom Entry → Warnung, Größe bleibt. `maxLev`-Werte sind recherchierte Annahmen (2026-10,
   FTMO Standard, Breakout Program Rules) — siehe Kommentar über `FX_LOT`.
 - **Log-Konsistenz.** `sendToLog` setzt Richtung neu (Pin weg), Volumen gerundet, Risk $ = echtes Risiko
-  des gerundeten Volumens; ohne Ergebnis werden Volumen/Risk $ geleert. „New trade" leert genau
+  des gerundeten Volumens; ohne Ergebnis werden Volumen/Risk $ geleert; übrige gefüllte
+  `TRADE_FIELDS` (Note, Extras) werden per confirm zum Leeren angeboten. „New trade" leert genau
   `TRADE_FIELDS`. Log-R:R folgt derselben Seitenregel wie der Sizer.
 - **TD-API-Key nur in localStorage** (`quicklog_td_key`) — NIE im Code, PNG, Sheet oder
   `quicklog`-Blob. `#tdKey` ist `type=password` und steht NICHT in `PERSISTED_FIELDS`. Die
@@ -71,11 +73,12 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
 
 - Schnelle Syntaxprüfung: `node --check app.js` (die Logik liegt jetzt direkt in `app.js`, keine
   `<script>`-Extraktion mehr nötig).
-- Geld-Mathematik: `node test/sizing.test.mjs` — 150 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
+- Geld-Mathematik: `node test/sizing.test.mjs` — 182 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
   Mapping A–W, leere Formelspalten M/N/O/P und Live↔Backtest-Ausrichtung, `contractValueFor`
   statisch/derive/cross inkl. USD/CAD & EUR/GBP, `FX_LOT` & `ACCOUNT_CCY` gepinnt, Sizing EUR/USD
   0.8333 & JPY 0.375, `roundVol`-Edges, `parseNum` inkl. Bänder, Log-R:R-Seite, Custom-Risk leer,
-  Auto-Richtung, `sizeChecks`, `riskForVol`, band+maxLev auf jedem Preset). Liest die
+  Auto-Richtung, `sizeChecks`, `riskForVol`, `outsideBand`, `sheetRisk`, `TRADE_FIELDS`, `sendToLog`
+  end-to-end mit persistentem DOM-Stub, band+maxLev auf jedem Preset). Liest die
   Formeln/Werte direkt aus dem Quelltext (kein hartkodiertes Replikat) → regrediert bei gebrochener Mathematik.
   Quelle ist seit dem PWA-Split `app.js` (nicht mehr `index.html`). Bei `const`/Arrow bricht die
   Extraktion laut (Testfehler, nie still grün).

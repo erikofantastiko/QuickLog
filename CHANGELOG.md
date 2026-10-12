@@ -20,11 +20,13 @@ First tagged release. Focus: the numbers you size and journal with can't be sile
   network-first with offline fallback; the cache rolls with `APP_VERSION`.
 
 ### Added
-- Plausibility warnings: leverage above the broker maximum, SL closer than 0.02 % of entry.
+- Plausibility warnings: leverage above the broker maximum, SL closer than 0.02 % of entry,
+  levels outside the instrument's plausible range (`20.150` on US100).
+- Send to Log offers to clear the previous trade's note and sheet extras.
 - Send to Log fills Risk $ (column K) with the real risk of the rounded volume.
 - "New trade (clear fields)" button in the Trade Log.
 - Decimal keypad on phones for number fields; every label focuses its field.
-- Version in the footer, this changelog, CI (GitHub Actions: syntax + 150 money-math assertions).
+- Version in the footer, this changelog, CI (GitHub Actions: syntax + 182 money-math assertions).
 
 ### Before 1.0
 PWA/offline split, JPY and account-currency aware contract values, FTMO contract sizes verified,
