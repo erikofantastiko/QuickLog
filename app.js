@@ -108,15 +108,20 @@ var state = {
 
 // Parse a user-typed number. Never guesses silently: anything it can't read
 // unambiguously is NaN, which the callers treat as "no result" (no mis-sizing).
-//   '.' or ',' as decimal; spaces/apostrophes as thousands ('1 234,5', "1'234.5").
+//   '.' or ',' as decimal; spaces/apostrophes as thousands, grouped by 3
+//   ('1 234,5', "1'234.5"); anything else with a space ('20150 20100') → NaN.
 //   Both '.' and ',' → the LAST one is the decimal, the other must group by 3
 //   ('20,150.5', '1.234,5'). Several ',' only → thousands ('1,234,567').
 //   A lone ',' + exactly 3 digits ('20,150', '1,085') is AMBIGUOUS (20150 or 20.15):
 //   resolved by `band` [min,max] (the instrument's plausible price range) when
 //   exactly one reading falls inside it, else NaN. Garbage ('1.2.3', '20abc') → NaN.
 function parseNum(v, band){
-  var s=String(v==null?'':v).trim().replace(/[\s'  ]/g,'');
+  var s=String(v==null?'':v).trim();
   if(!s) return NaN;
+  if(/[\s'\u00a0\u202f]/.test(s)){
+    if(!/^[+-]?\d{1,3}([\s'\u00a0\u202f]\d{3})+([.,]\d+)?$/.test(s)) return NaN;
+    s=s.replace(/[\s'\u00a0\u202f]/g,'');
+  }
   var dot=s.lastIndexOf('.'), com=s.lastIndexOf(',');
   if(dot>=0 && com>=0){
     if(com>dot){ if(!/^[+-]?\d{1,3}(\.\d{3})+,\d+$/.test(s)) return NaN; s=s.replace(/\./g,'').replace(',','.'); }
@@ -282,6 +287,15 @@ function calcSize(){
   return {riskAmt:riskAmt,dist:dist,vol:vol,rr:rr,rewardAmt:rewardAmt,tpWrongSide:tpWrongSide};
 }
 
+// Sizer price levels outside the instrument's plausible band — catches a dot used
+// as thousands separator ('20.150' on US100 = 20.15 → 1000× size) and other
+// decimal slips. Returns display labels of the offending levels.
+function outsideBand(levels, band){
+  if(!band) return [];
+  return levels.filter(function(l){ return !isNaN(l[1]) && (l[1]<band[0] || l[1]>band[1]); })
+               .map(function(l){ return l[0]+' '+l[1]; });
+}
+
 // ACCOUNT_CCY at risk for a given (already step-rounded) volume: vol × dist × cv.
 // After the floor in roundVol this is ≤ the target riskAmt.
 function riskForVol(vol, dist, cv){ return vol*dist*cv; }
@@ -320,14 +334,16 @@ function renderSize(){
   // then wrong-side TP (no R:R shown), then advisory R:R<1. Wrong-side wins
   // over R:R<1 because rr is null when the TP sits on the wrong side.
   var warn = '';
+  var oob=outsideBand([['Entry',numOf('szEntry')],['SL',numOf('szSL')],['TP',numOf('szTP')]], p&&p.band);
+  if(oob.length) warn += '<div class="sz-warn">'+esc(oob.join(', '))+' outside the usual '+esc(p.s)+' range ('+p.band[0]+'–'+p.band[1]+') — check the decimal point</div>';
   if(r.vol<=0){
-    warn = '<div class="sz-warn">Invalid size — check inputs</div>';
+    warn += '<div class="sz-warn">Invalid size — check inputs</div>';
   } else if(rv<=0){
-    warn = '<div class="sz-warn">Below minimum size (step '+st+') — increase risk or account</div>';
+    warn += '<div class="sz-warn">Below minimum size (step '+st+') — increase risk or account</div>';
   } else if(r.tpWrongSide){
-    warn = '<div class="sz-warn">Take Profit on wrong side for this entry/stop — check direction</div>';
+    warn += '<div class="sz-warn">Take Profit on wrong side for this entry/stop — check direction</div>';
   } else if(r.rr!=null && r.rr<1){
-    warn = '<div class="sz-warn soft">R:R below 1 — reward smaller than risk</div>';
+    warn += '<div class="sz-warn soft">R:R below 1 — reward smaller than risk</div>';
   }
   // Plausibility (independent of the warnings above): leverage beyond the
   // broker max, or a suspiciously tight stop. Advisory — the size stays as is.
@@ -374,6 +390,9 @@ function getLogRisk(){
   if($('rsk').value==='custom'){ var v=numOf('rskCustom'); return isNaN(v)?'':v; }
   return $('rsk').value;
 }
+
+// Sheet column J: '0.25%', or an empty cell when the risk is unknown (never 'NaN%').
+function sheetRisk(r){ return r===''?'':r+'%'; }
 
 /* ---------- Log card (shared by live Preview + PNG export) ---------- */
 
@@ -523,7 +542,7 @@ function copyForSheet(){
     sl:         $('slo').value,
     tp:         $('tpr').value,
     vol:        $('vol').value,
-    risk:       (function(r){ return r===''?'':r+'%'; })(getLogRisk()),
+    risk:       sheetRisk(getLogRisk()),
     riskUsd:    $('rskUsd').value,
     pnlUsd:     $('pnl').value,
     dir:        state.direction,
@@ -588,6 +607,13 @@ function exportPng(){
 
 // Transfer the Sizer result into the Trade Log fields.
 function sendToLog(){
+  // Trade fields the transfer doesn't overwrite (note, sheet extras). Filled ones
+  // belong to the previous trade — offer to clear them so they can't ride into
+  // this trade's sheet row. Cancel keeps them (e.g. re-sizing the same trade).
+  var leftovers=TRADE_FIELDS.filter(function(id){ return TRANSFER_FIELDS.indexOf(id)<0 && $(id) && $(id).value!==''; });
+  if(leftovers.length && window.confirm('The log still holds note / sheet extras from the previous trade. Clear them for this new trade?')){
+    leftovers.forEach(function(id){ $(id).value=''; });
+  }
   var r=calcSize();
   var instName=$('inst').value.replace(/\s*\(.*\)/,''); // strip "(NDX)"
   $('ast').value=instName.toUpperCase();
@@ -618,6 +644,8 @@ function sendToLog(){
 // exit/result/PnL/emotions can't silently ride into the next sheet row. Kept on
 // purpose: mode, session, risk %, setup, backtest ID/pool (stable across trades).
 var TRADE_FIELDS = ['ast','ent','slo','tpr','vol','nte','shot','exi','rskUsd','pnl','res','mgmt','emo','fbk'];
+// The subset sendToLog writes itself (the rest are leftovers it offers to clear).
+var TRANSFER_FIELDS = ['ast','ent','slo','tpr','vol','rskUsd'];
 
 function newTrade(){
   if(!window.confirm('Clear this trade (asset, levels, volume, note and sheet extras)?')) return;

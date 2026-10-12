@@ -114,23 +114,42 @@ const pieces = [
   // Trade Log side: R:R side check, custom-risk fallback, auto direction.
   extractFn('logRR'),
   extractFn('getLogRisk'),
-  extractFn('maybeAutoDirection')
+  extractFn('maybeAutoDirection'),
+  // Sizer → Log transfer + "New trade" field lists + sheet risk cell + band warning.
+  extractVarLiteral('TRADE_FIELDS', '[', ']'),
+  extractVarLiteral('TRANSFER_FIELDS', '[', ']'),
+  extractFn('sheetRisk'),
+  extractFn('outsideBand'),
+  extractFn('sendToLog')
 ];
 
 // Mutable field map standing in for the DOM inputs/selects.
 const fields = {};
 function setFields(obj) { for (const k in fields) delete fields[k]; Object.assign(fields, obj); }
-// `$` stub: returns an object whose .value is the (string) field, matching real inputs.
-const $ = (id) => ({ value: id in fields ? fields[id] : '' });
+// `$` stub: one persistent element per id whose .value reads/writes the (string)
+// field map, so functions that WRITE inputs (sendToLog) can be asserted too.
+const els = {};
+const $ = (id) => els[id] || (els[id] = {
+  get value() { return id in fields ? fields[id] : ''; },
+  set value(v) { fields[id] = String(v); },
+  style: {}, className: ''
+});
 
 // Minimal stand-in for the app's `state` object (only what the extracted Log functions read).
 const state = { direction: 'Long', dirManual: false };
 
-const factory = new Function('$', 'fields', 'state', `
+// DOM-side effects sendToLog triggers; recorded, not executed.
+const calls = [];
+const win = { confirmAnswer: true, confirmAsked: 0, confirm() { this.confirmAsked++; return this.confirmAnswer; } };
+
+const factory = new Function('$', 'fields', 'state', 'window', 'calls', `
+  function setTab(t){ calls.push('setTab:' + t); }
+  function update(){ calls.push('update'); }
+  function toast(m){ calls.push('toast:' + m); }
   ${pieces.join('\n')}
-  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, sizeChecks, riskForVol, logRR, getLogRisk, maybeAutoDirection };
+  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, sizeChecks, riskForVol, logRR, getLogRisk, maybeAutoDirection, TRADE_FIELDS, TRANSFER_FIELDS, sheetRisk, outsideBand, sendToLog };
 `);
-const M = factory($, fields, state);
+const M = factory($, fields, state, win, calls);
 
 /* ---------- preset lookups (by display name, from extracted PRESETS) ---------- */
 
@@ -389,6 +408,58 @@ r = M.calcSize();
 const rvEur = M.roundVol(r.vol);
 approx(M.riskForVol(rvEur, r.dist, 100000), 0.83 * 0.003 * 100000, 1e-6, 'EUR/USD 0.83 lots × 30 pips → $249');
 ok(M.riskForVol(rvEur, r.dist, 100000) <= r.riskAmt + 1e-9, 'floored risk never exceeds target');
+
+// 12. Parser: space/apostrophe thousands must group by 3 (no '20150 20100' → 2015020100).
+nan(M.parseNum('20150 20100'), "parseNum('20150 20100') → NaN (two numbers)");
+nan(M.parseNum('12 5'), "parseNum('12 5') → NaN");
+nan(M.parseNum("1'2.5"), "parseNum(\"1'2.5\") → NaN");
+nan(M.parseNum('1 2345'), "parseNum('1 2345') → NaN");
+nan(M.parseNum('1,23.5'), "parseNum('1,23.5') → NaN (bad US grouping)");
+eq(M.parseNum('1 234 567.89'), 1234567.89, "parseNum('1 234 567.89') == 1234567.89");
+eq(M.parseNum('1\u00a0234,5'), 1234.5, 'parseNum with NBSP thousands == 1234.5');
+
+// 13. Price levels outside the instrument band ('20.150' on US100 = 20.15 → 1000× size).
+const us100Band = presetFtmo('US100 (NDX)').band;
+eq(M.outsideBand([['Entry', 20.15], ['SL', 20.1]], us100Band).join('|'), 'Entry 20.15|SL 20.1', 'US100 20.15/20.1 flagged outside band');
+eq(M.outsideBand([['Entry', 20150], ['SL', NaN]], us100Band).length, 0, 'in-band / NaN levels not flagged');
+eq(M.outsideBand([['Entry', 1]], null).length, 0, 'no band → no flag');
+
+// 14. Sheet column J helper.
+eq(M.sheetRisk('0.25'), '0.25%', "sheetRisk('0.25') == '0.25%'");
+eq(M.sheetRisk(''), '', "sheetRisk('') == '' (never 'NaN%')");
+
+// 15. "New trade" clears exactly the trade fields; stable settings are never in the list.
+eq(M.TRADE_FIELDS.join(','), 'ast,ent,slo,tpr,vol,nte,shot,exi,rskUsd,pnl,res,mgmt,emo,fbk', 'TRADE_FIELDS = the 14 trade-specific ids');
+for (const keep of ['ses', 'rsk', 'rskCustom', 'stp', 'btId', 'pl']) ok(!M.TRADE_FIELDS.includes(keep), `TRADE_FIELDS must not clear '${keep}'`);
+ok(M.TRANSFER_FIELDS.every((id) => M.TRADE_FIELDS.includes(id)), 'TRANSFER_FIELDS ⊂ TRADE_FIELDS');
+
+// 16. sendToLog end to end (real function, DOM stubbed).
+//     Previous trade: Long pinned, old extras filled. New sizer trade: EUR/USD SHORT.
+const sizerShort = { brk: 'ftmo', inst: 'EUR/USD', accPreset: '100000', szRisk: '0.25', szRiskCustom: '',
+  szEntry: '1.08500', szSL: '1.08800', szTP: '1.07900', cv: '100000', rsk: '0.25' };
+setFields({ ...sizerShort, ast: 'OLD', vol: '9.99', rskUsd: '999', exi: '1.07', pnl: '-250', res: 'Lose', nte: 'old note', emo: 'tilt', ses: 'NY', stp: 'Other' });
+state.dirManual = true; state.direction = 'Long'; win.confirmAnswer = true; win.confirmAsked = 0; calls.length = 0;
+M.sendToLog();
+eq(state.direction, 'Short', 'sendToLog derives Short from the transferred levels');
+eq(state.dirManual, false, 'sendToLog drops the previous Long pin');
+eq(fields.ast, 'EUR/USD', 'asset transferred');
+eq(fields.vol, '0.83', 'volume = floored 0.8333 → 0.83');
+eq(fields.rskUsd, '249.00', 'Risk $ = 0.83 × 0.003 × 100000');
+eq(win.confirmAsked, 1, 'leftover extras → one confirm');
+ok(['exi', 'pnl', 'res', 'nte', 'emo'].every((id) => fields[id] === ''), 'confirmed: previous trade extras cleared');
+eq(fields.ses + '|' + fields.stp, 'NY|Other', 'session/setup untouched');
+ok(calls.includes('setTab:log'), 'switches to the Log tab');
+//     Cancel keeps the extras (re-sizing the same trade).
+setFields({ ...sizerShort, nte: 'keep me', exi: '1.07' });
+win.confirmAnswer = false; M.sendToLog();
+eq(fields.nte + '|' + fields.exi, 'keep me|1.07', 'cancelled confirm keeps note/extras');
+//     No leftovers → no confirm.
+setFields({ ...sizerShort }); win.confirmAsked = 0; M.sendToLog();
+eq(win.confirmAsked, 0, 'no leftovers → no confirm');
+//     No sizer result → previous volume / Risk $ are cleared, not carried.
+setFields({ ...sizerShort, szSL: '', vol: '9.99', rskUsd: '999' }); M.sendToLog();
+eq(fields.vol + '|' + fields.rskUsd, '|', 'no result → vol and Risk $ cleared');
+win.confirmAnswer = true; state.dirManual = false;
 
 /* =================== SUMMARY =================== */
 

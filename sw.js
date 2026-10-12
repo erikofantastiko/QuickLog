@@ -95,8 +95,8 @@ self.addEventListener('fetch', function (event) {
           // Without it the browser HTTP cache (GitHub Pages: max-age=600) answers
           // with the old file and "network-first" would still serve the old app.
           var network = fetch(req, { cache: 'no-cache' }).then(function (res) {
-            if (cacheOk(res)) cache.put(req, res.clone());
-            return res;
+            if (cacheOk(res)) { cache.put(req, res.clone()); return res; }
+            return cached || res; // 404/5xx mid-deploy: keep the last good copy
           });
           if (!cached) return network;
           var timeout = new Promise(function (resolve) {
