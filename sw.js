@@ -91,7 +91,10 @@ self.addEventListener('fetch', function (event) {
     event.respondWith(
       caches.open(CACHE).then(function (cache) {
         return cache.match(req, matchOpts).then(function (cached) {
-          var network = fetch(req).then(function (res) {
+          // cache:'no-cache' = revalidate with the server (cheap 304 via ETag).
+          // Without it the browser HTTP cache (GitHub Pages: max-age=600) answers
+          // with the old file and "network-first" would still serve the old app.
+          var network = fetch(req, { cache: 'no-cache' }).then(function (res) {
             if (cacheOk(res)) cache.put(req, res.clone());
             return res;
           });
