@@ -490,7 +490,19 @@ row = lastCopy();
 eq(row.length, 28, 'copyForSheet backtest row has 28 cells');
 eq(row[14], '0.33%', 'copyForSheet backtest J (index 14) = 0.33%');
 eq(row[0] + '|' + row[1], 'BT-1|P', 'copyForSheet backtest A/B = btId/pool');
-state.mode = 'live';
+//     Full live row, every cell, with distinct values so a swapped/mis-sourced cell fails.
+state.mode = 'live'; state.direction = 'Short';
+setFields({ ast: 'GBP/JPY', shot: 'https://shot', ent: '191.500', exi: '190.100', slo: '192.000', tpr: '189.500',
+            vol: '0.42', rsk: '0.50', rskUsd: '498.40', pnl: '1395.50', ses: 'NY', res: 'Win', stp: 'EBP H4',
+            nte: 'sweep + FVG', mgmt: 'BE at 1R', emo: 'calm', fbk: 'good entry' });
+M.copyForSheet();
+row = lastCopy();
+ok(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/.test(row[1]), `live B is 'DD/MM/YYYY HH:MM' (got ${row[1]})`);
+eq(JSON.stringify(row.slice(0, 1).concat(row.slice(2))), JSON.stringify([
+  '', /* B checked above */ 'GBP/JPY', 'https://shot', '191.500', '190.100', '192.000', '189.500', '0.42', '0.50%',
+  '498.40', '1395.50', '', '', '', '', 'Short', 'NY', 'Win', 'EBP H4 – sweep + FVG', 'BE at 1R', 'calm', 'good entry'
+]), 'copyForSheet full live row A..W (B excluded) matches the documented mapping cell by cell');
+state.direction = 'Long';
 
 /* =================== SUMMARY =================== */
 

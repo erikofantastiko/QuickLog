@@ -73,12 +73,12 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
 
 - Schnelle Syntaxprüfung: `node --check app.js` (die Logik liegt jetzt direkt in `app.js`, keine
   `<script>`-Extraktion mehr nötig).
-- Geld-Mathematik: `node test/sizing.test.mjs` — 194 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
+- Geld-Mathematik: `node test/sizing.test.mjs` — 196 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
   Mapping A–W, leere Formelspalten M/N/O/P und Live↔Backtest-Ausrichtung, `contractValueFor`
   statisch/derive/cross inkl. USD/CAD & EUR/GBP, `FX_LOT` & `ACCOUNT_CCY` gepinnt, Sizing EUR/USD
   0.8333 & JPY 0.375, `roundVol`-Edges, `parseNum` inkl. Bänder, Log-R:R-Seite, Custom-Risk leer,
   Auto-Richtung, `sizeChecks`, `riskForVol`, `outsideBand`, `sheetRisk`, `TRADE_FIELDS`, `sendToLog`
-  end-to-end mit persistentem DOM-Stub, echte `copyForSheet`-Zeile live/backtest, band+maxLev auf
+  end-to-end mit persistentem DOM-Stub, echte `copyForSheet`-Zeile live/backtest inkl. Zelle-für-Zelle-Vergleich A–W, band+maxLev auf
   jedem Preset außer Custom). Liest die
   Formeln/Werte direkt aus dem Quelltext (kein hartkodiertes Replikat) → regrediert bei gebrochener Mathematik.
   Quelle ist seit dem PWA-Split `app.js` (nicht mehr `index.html`). Bei `const`/Arrow bricht die

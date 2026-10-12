@@ -37,7 +37,7 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   Preis-Bändern (`20,150` sized nicht mehr 1000× zu groß), Richtung bei Send-to-Log, Log-R:R-Seite,
   kein `NaN%`, SW network-first + `APP_VERSION`, CI, Plausibilitätswarnungen (`maxLev`, enger SL),
   Ziffernfeld, Label-`for`, Risk $ automatisch, „New trade", Band-Warnung, Altdaten-Abfrage bei
-  Send to Log. Tests 55→194. Verdicts in `loop/verdicts/hardening-*.md`.
+  Send to Log. Tests 55→196. Verdicts in `loop/verdicts/hardening-*.md`.
 
 ## Backlog (priorisiert)
 
