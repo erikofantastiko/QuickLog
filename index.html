@@ -49,7 +49,7 @@
 
   <div class="fi" id="accCustomWrap" style="display:none">
     <label>Custom Account Size</label>
-    <input type="text" id="accCustom" placeholder="100000">
+    <input type="text" inputmode="decimal" id="accCustom" placeholder="100000">
   </div>
 
   <div class="r2">
@@ -71,12 +71,12 @@
 
   <div class="fi" id="szRiskCustomWrap" style="display:none">
     <label>Custom Risk %</label>
-    <input type="text" id="szRiskCustom" placeholder="0.33">
+    <input type="text" inputmode="decimal" id="szRiskCustom" placeholder="0.33">
   </div>
 
   <div class="fi" id="cvWrap">
     <label>Contract Value <span id="cvHint" style="text-transform:none;letter-spacing:0;color:var(--tx3)">(per 1.0 price move, per lot)</span></label>
-    <input type="text" id="cv" placeholder="1.0">
+    <input type="text" inputmode="decimal" id="cv" placeholder="1.0">
   </div>
 
   <div class="sp"></div>
@@ -84,17 +84,17 @@
   <div class="r2">
     <div class="fi">
       <label>Entry</label>
-      <input type="text" id="szEntry" placeholder="1.08500" style="font-family:var(--mn);font-size:18px">
+      <input type="text" inputmode="decimal" id="szEntry" placeholder="1.08500" style="font-family:var(--mn);font-size:18px">
     </div>
     <div class="fi">
       <label>Stop Loss</label>
-      <input type="text" id="szSL" placeholder="1.08200" style="font-family:var(--mn);font-size:18px">
+      <input type="text" inputmode="decimal" id="szSL" placeholder="1.08200" style="font-family:var(--mn);font-size:18px">
     </div>
   </div>
 
   <div class="fi">
     <label>Take Profit <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(optional, for R:R)</span></label>
-    <input type="text" id="szTP" placeholder="1.09500" style="font-family:var(--mn)">
+    <input type="text" inputmode="decimal" id="szTP" placeholder="1.09500" style="font-family:var(--mn)">
   </div>
 
   <div class="sl">Result</div>
@@ -186,30 +186,30 @@
 
   <div class="fi" id="rskCustomWrap" style="display:none">
     <label>Custom Risk %</label>
-    <input type="text" id="rskCustom" placeholder="0.33">
+    <input type="text" inputmode="decimal" id="rskCustom" placeholder="0.33">
   </div>
 
   <div class="sp"></div>
 
   <div class="fi">
     <label>Entry</label>
-    <input type="text" id="ent" placeholder="1.08500" style="font-family:var(--mn);font-size:18px">
+    <input type="text" inputmode="decimal" id="ent" placeholder="1.08500" style="font-family:var(--mn);font-size:18px">
   </div>
 
   <div class="r2">
     <div class="fi">
       <label>Stop Loss</label>
-      <input type="text" id="slo" placeholder="1.08200" style="font-family:var(--mn)">
+      <input type="text" inputmode="decimal" id="slo" placeholder="1.08200" style="font-family:var(--mn)">
     </div>
     <div class="fi">
       <label>Take Profit</label>
-      <input type="text" id="tpr" placeholder="1.09500" style="font-family:var(--mn)">
+      <input type="text" inputmode="decimal" id="tpr" placeholder="1.09500" style="font-family:var(--mn)">
     </div>
   </div>
 
   <div class="fi">
     <label>Volume <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(lots / units)</span></label>
-    <input type="text" id="vol" placeholder="0.00" style="font-family:var(--mn)">
+    <input type="text" inputmode="decimal" id="vol" placeholder="0.00" style="font-family:var(--mn)">
   </div>
 
   <div class="sp"></div>
@@ -247,7 +247,7 @@
     <div class="r2">
       <div class="fi">
         <label>Exit</label>
-        <input type="text" id="exi" placeholder="1.09500" style="font-family:var(--mn)">
+        <input type="text" inputmode="decimal" id="exi" placeholder="1.09500" style="font-family:var(--mn)">
       </div>
       <div class="fi">
         <label>Ergebnis</label>
@@ -260,7 +260,7 @@
     <div class="r2">
       <div class="fi">
         <label>Risk in $</label>
-        <input type="text" id="rskUsd" placeholder="250" style="font-family:var(--mn)">
+        <input type="text" inputmode="decimal" id="rskUsd" placeholder="250" style="font-family:var(--mn)">
       </div>
       <div class="fi">
         <label>PnL ($)</label>
