@@ -107,7 +107,11 @@ const pieces = [
   // getSizerRisk feeds calcSize (preset select vs. 'custom' free-text field);
   // it MUST be extracted or calcSize throws ReferenceError when evaluated.
   extractFn('getSizerRisk'),
-  extractFn('calcSize')
+  extractFn('calcSize'),
+  // Trade Log side: R:R side check, custom-risk fallback, auto direction.
+  extractFn('logRR'),
+  extractFn('getLogRisk'),
+  extractFn('maybeAutoDirection')
 ];
 
 // Mutable field map standing in for the DOM inputs/selects.
@@ -116,11 +120,14 @@ function setFields(obj) { for (const k in fields) delete fields[k]; Object.assig
 // `$` stub: returns an object whose .value is the (string) field, matching real inputs.
 const $ = (id) => ({ value: id in fields ? fields[id] : '' });
 
-const factory = new Function('$', 'fields', `
+// Minimal stand-in for the app's `state` object (only what the extracted Log functions read).
+const state = { direction: 'Long', dirManual: false };
+
+const factory = new Function('$', 'fields', 'state', `
   ${pieces.join('\n')}
-  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize };
+  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, logRR, getLogRisk, maybeAutoDirection };
 `);
-const M = factory($, fields);
+const M = factory($, fields, state);
 
 /* ---------- preset lookups (by display name, from extracted PRESETS) ---------- */
 
@@ -310,6 +317,42 @@ eq(M.bandFor('ent'), null, 'unknown asset → no band');
 //    Account custom '100,000' → 100000 (band [1000,1e9]).
 setFields({ accPreset: 'custom', accCustom: '100,000' });
 eq(M.getAccount(), 100000, "custom account '100,000' → 100000");
+
+// 7. Trade Log R:R — same wrong-side rule as the sizer (was a positive 1.67R on the card).
+setFields({ ast: 'EUR/USD', ent: '1.085', slo: '1.082', tpr: '1.080' });
+eq(M.logRR(), null, 'Log: Long with TP below entry → no R:R');
+setFields({ ast: 'EUR/USD', ent: '1.085', slo: '1.082', tpr: '1.091' });
+eq(M.logRR(), '2.00', 'Log: Long TP 1.091 / entry 1.085 / SL 1.082 → 2.00R');
+setFields({ ast: 'EUR/USD', ent: '1.085', slo: '1.088', tpr: '1.079' });
+eq(M.logRR(), '2.00', 'Log: Short TP below entry → 2.00R');
+setFields({ ast: 'EUR/USD', ent: '1.085', slo: '1.088', tpr: '1.090' });
+eq(M.logRR(), null, 'Log: Short with TP above entry → no R:R');
+setFields({ ast: 'EUR/USD', ent: '1.085', slo: '1.082', tpr: '1.085' });
+eq(M.logRR(), null, 'Log: TP == entry → no R:R');
+
+// 8. Log custom risk: empty/unreadable → '' (never 'NaN%' in column J).
+setFields({ rsk: 'custom', rskCustom: '' });
+eq(M.getLogRisk(), '', 'getLogRisk custom empty → ""');
+setFields({ rsk: 'custom', rskCustom: 'abc' });
+eq(M.getLogRisk(), '', 'getLogRisk custom garbage → ""');
+setFields({ rsk: 'custom', rskCustom: '0,33' });
+eq(M.getLogRisk(), 0.33, "getLogRisk custom '0,33' → 0.33");
+setFields({ rsk: '0.25' });
+eq(M.getLogRisk(), '0.25', 'getLogRisk preset → select value verbatim');
+
+// 9. Auto direction from Entry vs SL (used by the Log inputs and by sendToLog).
+state.dirManual = false; state.direction = 'Long';
+setFields({ ast: 'EUR/USD', ent: '1.085', slo: '1.088' });
+M.maybeAutoDirection();
+eq(state.direction, 'Short', 'Entry < SL → Short');
+setFields({ ast: 'US100', ent: '20,150', slo: '20,100' });
+M.maybeAutoDirection();
+eq(state.direction, 'Long', "US100 '20,150' > '20,100' → Long (band-resolved)");
+state.dirManual = true;
+setFields({ ast: 'EUR/USD', ent: '1.085', slo: '1.088' });
+M.maybeAutoDirection();
+eq(state.direction, 'Long', 'manual pin is respected by maybeAutoDirection');
+state.dirManual = false;
 
 /* =================== SUMMARY =================== */
 
