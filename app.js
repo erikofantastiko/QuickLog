@@ -1288,6 +1288,7 @@ function init(){
   // Restore the Twelve Data key from its OWN localStorage key (never via the
   // 'quicklog' form-state blob). Field is type=password so it isn't shoulder-read.
   var tk=$('tdKey'); if(tk) tk.value=tdKey();
+  var ver=$('appVer'); if(ver) ver.textContent='QuickLog v'+APP_VERSION;
   fillInstruments();
   // Seed the default instrument's contract value on a fresh load;
   // loadState() supplies it when prior inputs exist.

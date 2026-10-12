@@ -33,6 +33,11 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   statisch; sonst `FX_LOT/entry`, exakt bei Basis=USD (**USD/CAD-Fix**), sonst Cross-Approx mit
   sichtbarem „verify in MT5"-Hint. Keine Cross-Rate-Abfrage (keyless/offline bleibt). Test 25→29.
 
+- **1.0-Härtungslauf** (Branch `claude/quicklog-hardening`) — strenges Zahlenparsing mit
+  Preis-Bändern (`20,150` sized nicht mehr 1000× zu groß), Richtung bei Send-to-Log, Log-R:R-Seite,
+  kein `NaN%`, SW network-first + `APP_VERSION`, CI, Plausibilitätswarnungen (`maxLev`, enger SL),
+  Ziffernfeld, Label-`for`, Risk $ automatisch, „New trade". Tests 55→150. Verdicts in `loop/verdicts/`.
+
 ## Backlog (priorisiert)
 
 ### P0 — PWA / Offline-Umstellung  ·  Status: ✅ merged → main (e1e149f)  ·  Aufwand: M
@@ -103,3 +108,15 @@ importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Fra
   ist dort nur eine Näherung, im UI als „≈ cross-rate approx, verify in MT5 / override" markiert. Exakte
   Auto-Korrektur bräuchte eine USDJPY/GBPUSD-Quelle (bewusst nicht gebaut: bricht keyless/offline). Bei
   diesen Paaren cv in MT5 prüfen oder manuell überschreiben. Wechsel der Kontowährung: nur `ACCOUNT_CCY`.
+- **ETHUSD Contract Size (offen, 2026-10)** — Websuche: FTMO-Update 24.07.2025 soll ETHUSD auf
+  Contract size 10 gesetzt haben. Unverifiziert → Preset bleibt cv 1. In MT5 prüfen (Specification);
+  bei 10: Preset `ETH/USD` cv auf 10 und Test-Erwartung anpassen.
+- **maxLev = Annahme** — FTMO-Werte gelten für Standard-Accounts; Swing ist niedriger (FX 1:30,
+  Metalle/Indizes 1:15, Krypto 1:1). Falls Swing genutzt wird: Werte im Preset senken.
+
+## Backlog nach 1.0 (Ideen, nicht beauftragt)
+
+- **Log-Felder „Can't read"-Hinweis** — der Sizer nennt unlesbare Zahlen, der Log nicht (Copy for
+  Sheet kopiert den Rohtext; das Sheet interpretiert ihn nach Locale). Aufwand S.
+- **Swing/Standard-Schalter** für `maxLev`, falls beide Kontotypen genutzt werden. Aufwand S.
+

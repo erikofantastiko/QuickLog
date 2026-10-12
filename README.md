@@ -16,7 +16,35 @@ TradingView chart embed for reading levels off the chart (levels are typed manua
 journal column order. Two outputs: "Copy for Sheet" (clipboard) and "PNG for X" (renders the trade
 card as an image via html2canvas).
 
-"Send to Trade Log →" carries sizer values into the log tab.
+"Send to Trade Log →" carries sizer values into the log tab: levels, risk %, the step-rounded volume,
+the **real risk in $ of that volume** (Sheet column K) and the direction derived from Entry vs SL.
+
+"New trade (clear fields)" in the log empties asset, levels, volume, note and all sheet extras, so the
+previous trade's exit/result/PnL can't ride into the next sheet row. Mode, session, risk %, setup and
+backtest ID/pool stay.
+
+## Number input
+
+Type prices the way you like; the parser never guesses silently:
+
+| You type | Read as |
+|---|---|
+| `1.08500`, `1,08500` | 1.085 (dot or comma as decimal) |
+| `20150.5`, `20,150.5`, `20.150,5`, `20 150,5` | 20150.5 (thousands separators) |
+| `20,150` on US100 · `150,125` on USD/JPY | 20150 · 150.125 — a lone `,ddd` is ambiguous and resolved by the instrument's plausible price range |
+| `20,150` on a custom instrument, `1.2.3`, `20abc` | not read → the sizer shows *Can't read …* and no size |
+
+On phones the number fields open the decimal keypad (PnL keeps the full keyboard for the minus sign).
+
+## Plausibility warnings
+
+The sizer flags, without changing the size:
+
+- **Leverage above the broker maximum** — exposure (`lots × cv × entry`) ÷ account above the
+  instrument's `maxLev` (FTMO Standard: FX 1:100, metals 1:50, indices 1:50, crypto 1:3.3; Breakout:
+  BTC 10x, ETH and listed alts 5x — researched 2026-10, Swing accounts are lower; verify).
+- **SL closer than 0.02 % of entry** — typical of a mistyped level that would size 10× too large.
+- TP on the wrong side, R:R below 1, below minimum step (as before).
 
 ## Hosting
 
@@ -27,9 +55,12 @@ service worker register without fallbacks. On mobile, "Install" / "Add to Home S
 like a native app (dark status bar, full-screen, launches offline). Opening `index.html` via `file://`
 also still works — the service worker is skipped there.
 
-The service worker (`sw.js`) precaches the app shell (`quicklog-v1`) so the core (Sizer + Log + PNG)
-loads and runs offline. The TradingView chart and any price feeds stay online-only (cross-origin
-requests are passed straight through and never cached).
+The service worker (`sw.js`) precaches the app shell so the core (Sizer + Log + PNG) loads and runs
+offline. App code is fetched **network-first** (a deploy is live on the next load; cache fallback when
+offline or after 3 s), icons and vendored libs stale-while-revalidate. The cache is named after
+`APP_VERSION` in `app.js` (registered as `sw.js?v=…`) — bump that one constant per release. The
+TradingView chart and any price feeds stay online-only (cross-origin requests are passed straight
+through and never cached).
 
 ## Contract values — IMPORTANT
 
@@ -44,7 +75,7 @@ official FTMO spec sheet. Formula used: `CV = Risk$ / (Lot × SL-distance)`.
 | US500 (SPX) | 1 | FTMO CFD logic, analogous to US100 |
 | XAU/USD | 100 | 1 lot = 100 oz |
 | XAG/USD | 5000 | 1 lot = 5000 oz |
-| BTC/USD, ETH/USD | 1 | logged FTMO trades (≈1 unit/lot) |
+| BTC/USD, ETH/USD | 1 | logged FTMO trades (≈1 unit/lot) — **ETH: check**, an FTMO trading update (24 Jul 2025) reportedly moved ETHUSD to contract size 10 |
 
 **Verify against MT5 before trusting blindly.** FTMO does not publish a central CV table; the exact
 value is in the platform: Market Watch (Ctrl+M) → right-click instrument → Specification. If a value
@@ -147,10 +178,13 @@ the sheet — the mapping assumes it is gone.
 
 ## Stack
 
+- Version shown in the footer (`APP_VERSION` in `app.js`); changes in [CHANGELOG.md](CHANGELOG.md)
+- Tests: `node test/sizing.test.mjs` (money math, number parsing, sheet layout); GitHub Actions runs
+  it plus `node --check` on every push / PR (`.github/workflows/test.yml`)
 - Plain HTML/CSS/JS, no framework, no build step — `index.html` (markup) + `app.js` (one classic IIFE,
   not an ES module, so `file://` keeps working) + `styles.css`
-- Installable PWA: `manifest.webmanifest` + `sw.js` (app-shell precache, stale-while-revalidate for
-  same-origin, network-only passthrough for chart/feeds) + `icons/`
+- Installable PWA: `manifest.webmanifest` + `sw.js` (app-shell precache, network-first app code,
+  stale-while-revalidate static assets, network-only passthrough for chart/feeds) + `icons/`
 - `html2canvas` vendored locally (`vendor/html2canvas.min.js`) for offline PNG export
 - TradingView `tv.js` widget (CDN, loaded on demand) for the optional chart — online-only
 - Clipboard API with `execCommand` fallback

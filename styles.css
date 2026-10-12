@@ -85,6 +85,7 @@
   font-size:var(--fs-sm);font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999
 }
 .tl .tst.vis{opacity:1}
+.tl .ver{margin-top:32px;text-align:center;font-size:var(--fs-xs);color:var(--tx3)}
 .tl #chartLevels{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-top:10px}
 .tl #chartLevels:empty{display:none}
 .tl .lvl{font-family:var(--mn);font-size:var(--fs-2xs);font-weight:600;padding:3px 8px;border-radius:6px}

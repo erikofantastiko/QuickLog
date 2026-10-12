@@ -18,9 +18,12 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Indizes/Override/Custom bleiben beim TradingView-`tv.js`-Widget (kein Linien-API, keine freie
   Index-Datenquelle) + Chips-Overlay. Dispatch in `app.js`: `cryptoKrakenPair` → Kraken, sonst
   `twelveDataSymbol` + Key → TD, sonst Widget. Jeder Fehler (CORS/Symbol/Key) ⇒ Widget-Fallback.
-- **PWA-Dateien:** `manifest.webmanifest`, `sw.js` (App-Shell-Precache `quicklog-v1`,
-  stale-while-revalidate für same-origin, cross-origin durchgereicht), `icons/` (icon.svg +
-  192/512/apple-touch PNG). Installierbar + Kern offline.
+- **PWA-Dateien:** `manifest.webmanifest`, `sw.js` (App-Shell-Precache, App-Code network-first mit
+  Cache-Fallback/3-s-Timeout, Icons/Vendor stale-while-revalidate, cross-origin durchgereicht),
+  `icons/` (icon.svg + 192/512/apple-touch PNG). Installierbar + Kern offline.
+- **Version:** `APP_VERSION` in `app.js` (Footer + `sw.js?v=…` → Cache-Name `quicklog-<version>`).
+  Pro Release NUR diese Konstante bumpen + [CHANGELOG.md](CHANGELOG.md) ergänzen.
+- **CI:** `.github/workflows/test.yml` — `node --check app.js sw.js` + `node test/sizing.test.mjs`.
 
 ## Invarianten — nicht regredieren lassen
 
@@ -44,8 +47,22 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   .cash Contract size 1 → $1/Punkt/Lot, XAU 100 oz, XAG 5000 oz, BTC/ETH 1 Coin — decken sich mit
   FTMOs EU-Specs. Restunschärfe sind nur die Cross-Rate-Paare oben (→ Override). Trotzdem im
   Zweifel in MT5 prüfen (Market Watch → Specification); jedes Instrument hat manuellen Override.
+  **Offen (2026-10):** Websuche fand ein FTMO-Trading-Update (24.07.2025), laut dem ETHUSD auf
+  Contract size 10 umgestellt wurde. Nicht verifiziert (nur Such-Zusammenfassung) → Preset unverändert
+  (cv 1), bis Erik es in MT5 prüft. Bei cv 10 wäre die ETH-Größe aktuell 10× zu groß.
 - **Broker-Modelle:** FTMO = MT5 CFD, Sizing in Lots. Breakout = Crypto-Perps, Sizing in Coins
   (`coins = Risk$ / |Entry − SL|`, cv = 1), Kraken-Feeds.
+- **Zahlen nie still falsch lesen.** Alle Zahlenfelder laufen über `numOf(id)` → `parseNum(v, bandFor(id))`.
+  Punkt/Komma als Dezimal, Leer/Apostroph/gruppierte Tausender ok, Müll → NaN. Einzelnes `,ddd`
+  (`20,150`) ist mehrdeutig → per Preset-`band:[min,max]` aufgelöst, wenn genau eine Lesart drin liegt,
+  sonst NaN (kein Ergebnis + „Can't read"-Hinweis). Bänder sind bewusst weit und lösen NUR
+  Mehrdeutiges auf, ändern nie eindeutige Eingaben.
+- **Plausibilität = nur Warnung.** `sizeChecks`: Hebel `vol×cv×entry/account` > Preset-`maxLev` bzw.
+  SL < 0,02 % vom Entry → Warnung, Größe bleibt. `maxLev`-Werte sind recherchierte Annahmen (2026-10,
+  FTMO Standard, Breakout Program Rules) — siehe Kommentar über `FX_LOT`.
+- **Log-Konsistenz.** `sendToLog` setzt Richtung neu (Pin weg), Volumen gerundet, Risk $ = echtes Risiko
+  des gerundeten Volumens; ohne Ergebnis werden Volumen/Risk $ geleert. „New trade" leert genau
+  `TRADE_FIELDS`. Log-R:R folgt derselben Seitenregel wie der Sizer.
 - **TD-API-Key nur in localStorage** (`quicklog_td_key`) — NIE im Code, PNG, Sheet oder
   `quicklog`-Blob. `#tdKey` ist `type=password` und steht NICHT in `PERSISTED_FIELDS`. Die
   veröffentlichte Seite ist keyless.
@@ -54,10 +71,11 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
 
 - Schnelle Syntaxprüfung: `node --check app.js` (die Logik liegt jetzt direkt in `app.js`, keine
   `<script>`-Extraktion mehr nötig).
-- Geld-Mathematik: `node test/sizing.test.mjs` — 55 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
+- Geld-Mathematik: `node test/sizing.test.mjs` — 150 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
   Mapping A–W, leere Formelspalten M/N/O/P und Live↔Backtest-Ausrichtung, `contractValueFor`
   statisch/derive/cross inkl. USD/CAD & EUR/GBP, `FX_LOT` & `ACCOUNT_CCY` gepinnt, Sizing EUR/USD
-  0.8333 & JPY 0.375, `roundVol`-Edges). Liest die
+  0.8333 & JPY 0.375, `roundVol`-Edges, `parseNum` inkl. Bänder, Log-R:R-Seite, Custom-Risk leer,
+  Auto-Richtung, `sizeChecks`, `riskForVol`, band+maxLev auf jedem Preset). Liest die
   Formeln/Werte direkt aus dem Quelltext (kein hartkodiertes Replikat) → regrediert bei gebrochener Mathematik.
   Quelle ist seit dem PWA-Split `app.js` (nicht mehr `index.html`). Bei `const`/Arrow bricht die
   Extraktion laut (Testfehler, nie still grün).
