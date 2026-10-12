@@ -9,8 +9,8 @@ Ausgeführt vom Koordinator auf dem fertigen Branch. Skripte lagen nur in der Se
 | Fall | Erwartet | Ist |
 |---|---|---|
 | `node --check app.js` / `sw.js` | grün | grün |
-| `node test/sizing.test.mjs` | alle grün | PASS 182/182 (main: 55) |
-| Mutationen (15: alter `parseNum`, Gruppierungs-Checks, `logRR` ohne Seitenprüfung, `getLogRisk` NaN, `sheetRisk` NaN%, `sizeChecks` ohne enge-SL-Prüfung, `riskForVol`×2, Richtung invertiert, Pin in `sendToLog`, `exi` aus `TRADE_FIELDS`, rskUsd nicht geleert, `outsideBand` aus, Altdaten nicht geleert, Volumenformel×2) | jede rot | 15/15 rot |
+| `node test/sizing.test.mjs` | alle grün | PASS 194/194 (main: 55) |
+| Mutationen (15: alter `parseNum`, Gruppierungs-Checks, `logRR` ohne Seitenprüfung, `getLogRisk` NaN, `sheetRisk` NaN%, `sizeChecks` ohne enge-SL-Prüfung, `riskForVol`×2, Richtung invertiert, Pin in `sendToLog`, `exi` aus `TRADE_FIELDS`, rskUsd nicht geleert, `outsideBand` aus, Altdaten nicht geleert, Volumenformel×2) | jede rot | 15/15 rot; nach Runde 2 weitere 7 (u.a. `copyForSheet`-Aufrufstelle M13a, Spaltentausch E↔G) 7/7 rot |
 
 ## Sizing-Simulation (Fuzz gegen unabhängige Referenzformel)
 

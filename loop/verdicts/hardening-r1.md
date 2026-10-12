@@ -25,5 +25,6 @@ eigene Referenz-Implementierung.
 - CI auf Node 20 (EOL).
 
 ## VERDICT: REJECT → Fixes in d8e3cf3 (+ 31a93f2 für `no-cache`)
-Alle fünf überlebenden Mutationen werden nach dem Fix von der Suite gefangen (15/15). Runde 2 siehe
-`hardening-r2.md`.
+Nach d8e3cf3 fing die Suite die eigenen 15 Mutationen. **Korrektur aus Runde 2:** M13 war nur am
+Helfer `sheetRisk` getötet, nicht an der Aufrufstelle in `copyForSheet` (M13a überlebte). Behoben in
+Runde 2 (echter `copyForSheet`-Test). Siehe `hardening-r2.md`.

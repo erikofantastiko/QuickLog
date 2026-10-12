@@ -120,7 +120,10 @@ const pieces = [
   extractVarLiteral('TRANSFER_FIELDS', '[', ']'),
   extractFn('sheetRisk'),
   extractFn('outsideBand'),
-  extractFn('sendToLog')
+  extractFn('sendToLog'),
+  // The REAL sheet export, so a regression at the call site (not just in a helper) fails.
+  extractFn('today'),
+  extractFn('copyForSheet')
 ];
 
 // Mutable field map standing in for the DOM inputs/selects.
@@ -136,7 +139,7 @@ const $ = (id) => els[id] || (els[id] = {
 });
 
 // Minimal stand-in for the app's `state` object (only what the extracted Log functions read).
-const state = { direction: 'Long', dirManual: false };
+const state = { direction: 'Long', dirManual: false, mode: 'live' };
 
 // DOM-side effects sendToLog triggers; recorded, not executed.
 const calls = [];
@@ -146,8 +149,9 @@ const factory = new Function('$', 'fields', 'state', 'window', 'calls', `
   function setTab(t){ calls.push('setTab:' + t); }
   function update(){ calls.push('update'); }
   function toast(m){ calls.push('toast:' + m); }
+  function copyText(t){ calls.push({ copied: t }); }
   ${pieces.join('\n')}
-  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, sizeChecks, riskForVol, logRR, getLogRisk, maybeAutoDirection, TRADE_FIELDS, TRANSFER_FIELDS, sheetRisk, outsideBand, sendToLog };
+  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, sizeChecks, riskForVol, logRR, getLogRisk, maybeAutoDirection, TRADE_FIELDS, TRANSFER_FIELDS, sheetRisk, outsideBand, sendToLog, copyForSheet };
 `);
 const M = factory($, fields, state, win, calls);
 
@@ -415,6 +419,7 @@ nan(M.parseNum('12 5'), "parseNum('12 5') → NaN");
 nan(M.parseNum("1'2.5"), "parseNum(\"1'2.5\") → NaN");
 nan(M.parseNum('1 2345'), "parseNum('1 2345') → NaN");
 nan(M.parseNum('1,23.5'), "parseNum('1,23.5') → NaN (bad US grouping)");
+nan(M.parseNum('1234 567'), "parseNum('1234 567') → NaN (first group > 3 digits)");
 eq(M.parseNum('1 234 567.89'), 1234567.89, "parseNum('1 234 567.89') == 1234567.89");
 eq(M.parseNum('1\u00a0234,5'), 1234.5, 'parseNum with NBSP thousands == 1234.5');
 
@@ -423,6 +428,7 @@ const us100Band = presetFtmo('US100 (NDX)').band;
 eq(M.outsideBand([['Entry', 20.15], ['SL', 20.1]], us100Band).join('|'), 'Entry 20.15|SL 20.1', 'US100 20.15/20.1 flagged outside band');
 eq(M.outsideBand([['Entry', 20150], ['SL', NaN]], us100Band).length, 0, 'in-band / NaN levels not flagged');
 eq(M.outsideBand([['Entry', 1]], null).length, 0, 'no band → no flag');
+eq(M.outsideBand([['Entry', 1085]], [0.5, 2]).length, 1, 'above the band is flagged too (EUR/USD 1085)');
 
 // 14. Sheet column J helper.
 eq(M.sheetRisk('0.25'), '0.25%', "sheetRisk('0.25') == '0.25%'");
@@ -456,10 +462,35 @@ eq(fields.nte + '|' + fields.exi, 'keep me|1.07', 'cancelled confirm keeps note/
 //     No leftovers → no confirm.
 setFields({ ...sizerShort }); win.confirmAsked = 0; M.sendToLog();
 eq(win.confirmAsked, 0, 'no leftovers → no confirm');
+//     Fields the transfer overwrites itself are never "leftovers".
+setFields({ ...sizerShort, ast: 'OLD', ent: '1', slo: '2', tpr: '3', vol: '9.99', rskUsd: '999' }); win.confirmAsked = 0; M.sendToLog();
+eq(win.confirmAsked, 0, 'only transfer fields filled → no confirm');
 //     No sizer result → previous volume / Risk $ are cleared, not carried.
 setFields({ ...sizerShort, szSL: '', vol: '9.99', rskUsd: '999' }); M.sendToLog();
 eq(fields.vol + '|' + fields.rskUsd, '|', 'no result → vol and Risk $ cleared');
 win.confirmAnswer = true; state.dirManual = false;
+
+// 17. copyForSheet — the real row (live 23 / backtest 28), column J never 'NaN%' / '%'.
+const lastCopy = () => { for (let i = calls.length - 1; i >= 0; i--) if (calls[i] && calls[i].copied != null) return calls[i].copied.split('\t'); return null; };
+const logBase = { ast: 'EUR/USD', ent: '1.085', slo: '1.082', tpr: '1.091', vol: '0.83', ses: 'London', stp: 'Other', nte: '', btId: 'BT-1', pl: 'P' };
+state.mode = 'live'; state.direction = 'Long';
+setFields({ ...logBase, rsk: '0.25' }); M.copyForSheet();
+let row = lastCopy();
+eq(row.length, 23, 'copyForSheet live row has 23 cells');
+eq(row[9], '0.25%', 'copyForSheet live J = 0.25%');
+eq(row.slice(12, 16).join(''), '', 'copyForSheet live M–P empty');
+eq(row[16], 'Long', 'copyForSheet live Q = direction');
+setFields({ ...logBase, rsk: 'custom', rskCustom: '' }); M.copyForSheet();
+row = lastCopy();
+eq(row[9], '', "copyForSheet custom risk empty → J '' (not 'NaN%' / '%')");
+ok(!row.join('|').includes('NaN'), 'copyForSheet row never contains NaN');
+state.mode = 'backtest';
+setFields({ ...logBase, rsk: 'custom', rskCustom: '0,33' }); M.copyForSheet();
+row = lastCopy();
+eq(row.length, 28, 'copyForSheet backtest row has 28 cells');
+eq(row[14], '0.33%', 'copyForSheet backtest J (index 14) = 0.33%');
+eq(row[0] + '|' + row[1], 'BT-1|P', 'copyForSheet backtest A/B = btId/pool');
+state.mode = 'live';
 
 /* =================== SUMMARY =================== */
 
