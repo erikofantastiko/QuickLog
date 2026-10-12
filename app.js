@@ -9,6 +9,10 @@
 
 var $ = function(id){ return document.getElementById(id); };
 
+// Release version. Shown in the footer and passed to the service worker as
+// './sw.js?v=…' — bumping it here is the ONE place that rolls the offline cache.
+var APP_VERSION = '1.0.0';
+
 /* ---------- Constants ---------- */
 
 // Instrument presets per broker.
@@ -1243,7 +1247,7 @@ function init(){
 // file:// (double-click local use) where SW registration is unavailable.
 function registerServiceWorker(){
   if('serviceWorker' in navigator && location.protocol!=='file:'){
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
+    navigator.serviceWorker.register('./sw.js?v='+encodeURIComponent(APP_VERSION)).catch(function(){});
   }
 }
 

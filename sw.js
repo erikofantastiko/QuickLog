@@ -2,15 +2,25 @@
 // The chart (TradingView) and any price feeds stay ONLINE-ONLY: cross-origin
 // requests are passed straight through to the network and never cached.
 //
+// Versioning: app.js registers './sw.js?v=<APP_VERSION>'. A new APP_VERSION is a
+// new script URL → the browser installs this worker again with a fresh cache
+// name, and activate drops the old quicklog-* caches. Bump APP_VERSION in app.js
+// only; there is no second version string to keep in sync here.
+//
 // Strategy:
 //   install  -> precache the app shell, then skipWaiting (take over immediately)
 //   activate -> drop stale quicklog-* caches, then clients.claim()
-//   fetch    -> same-origin GET: stale-while-revalidate (serve cache fast,
-//               refresh in the background); everything else: network passthrough.
+//   fetch    -> same-origin code (navigation, .html/.js/.css/.webmanifest):
+//                 NETWORK-FIRST, so a deploy is live on the next load; cache
+//                 fallback when offline or when the network takes > 3 s.
+//               same-origin static (icons, vendor libs): stale-while-revalidate.
+//               everything else: network passthrough.
 
 'use strict';
 
-var CACHE = 'quicklog-v1';
+var VERSION = new URL(self.location.href).searchParams.get('v') || 'dev';
+var CACHE = 'quicklog-' + VERSION;
+var NETWORK_TIMEOUT_MS = 3000;
 
 // App shell — relative paths (GitHub Pages serves this under a subpath).
 var SHELL = [
@@ -21,6 +31,7 @@ var SHELL = [
   './vendor/html2canvas.min.js',
   './vendor/lightweight-charts.standalone.production.js',
   './manifest.webmanifest',
+  './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png'
@@ -52,6 +63,14 @@ self.addEventListener('activate', function (event) {
   );
 });
 
+// App code that must never lag behind a deploy.
+function isAppCode(req, url) {
+  if (req.mode === 'navigate') return true;
+  return /\.(html|js|css|webmanifest)$/.test(url.pathname) && url.pathname.indexOf('/vendor/') < 0;
+}
+
+function cacheOk(res) { return res && res.status === 200 && res.type === 'basic'; }
+
 self.addEventListener('fetch', function (event) {
   var req = event.request;
 
@@ -60,20 +79,39 @@ self.addEventListener('fetch', function (event) {
 
   // Same-origin only. Cross-origin (TradingView s3/s.tradingview.com, Kraken
   // api.kraken.com OHLC, Twelve Data api.twelvedata.com FX/metal OHLC, OANDA,
-  // CDNs) is passed through untouched and never cached. The Lightweight Charts
-  // lib itself is same-origin (vendored) and already precached in SHELL.
-  var sameOrigin = new URL(req.url).origin === self.location.origin;
-  if (!sameOrigin) return; // default browser fetch
+  // CDNs) is passed through untouched and never cached.
+  var url = new URL(req.url);
+  if (url.origin !== self.location.origin) return; // default browser fetch
 
-  // Stale-while-revalidate: respond from cache immediately if present, and
-  // refresh the cached copy in the background. Fall back to network on miss.
+  // Navigations may carry a query string; match the cached shell regardless.
+  var matchOpts = { ignoreSearch: req.mode === 'navigate' };
+
+  if (isAppCode(req, url)) {
+    // Network-first with cache fallback (offline / slow network).
+    event.respondWith(
+      caches.open(CACHE).then(function (cache) {
+        return cache.match(req, matchOpts).then(function (cached) {
+          var network = fetch(req).then(function (res) {
+            if (cacheOk(res)) cache.put(req, res.clone());
+            return res;
+          });
+          if (!cached) return network;
+          var timeout = new Promise(function (resolve) {
+            setTimeout(function () { resolve(cached); }, NETWORK_TIMEOUT_MS);
+          });
+          return Promise.race([network.catch(function () { return cached; }), timeout]);
+        });
+      })
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for static assets (icons, vendored libs).
   event.respondWith(
     caches.open(CACHE).then(function (cache) {
-      return cache.match(req).then(function (cached) {
+      return cache.match(req, matchOpts).then(function (cached) {
         var network = fetch(req).then(function (res) {
-          if (res && res.status === 200 && res.type === 'basic') {
-            cache.put(req, res.clone());
-          }
+          if (cacheOk(res)) cache.put(req, res.clone());
           return res;
         }).catch(function () { return cached; });
         return cached || network;
