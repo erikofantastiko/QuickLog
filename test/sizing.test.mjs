@@ -108,6 +108,8 @@ const pieces = [
   // it MUST be extracted or calcSize throws ReferenceError when evaluated.
   extractFn('getSizerRisk'),
   extractFn('calcSize'),
+  extractVarScalar('TIGHT_SL_FRACTION'),
+  extractFn('sizeChecks'),
   // Trade Log side: R:R side check, custom-risk fallback, auto direction.
   extractFn('logRR'),
   extractFn('getLogRisk'),
@@ -125,7 +127,7 @@ const state = { direction: 'Long', dirManual: false };
 
 const factory = new Function('$', 'fields', 'state', `
   ${pieces.join('\n')}
-  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, logRR, getLogRisk, maybeAutoDirection };
+  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, sizeChecks, logRR, getLogRisk, maybeAutoDirection };
 `);
 const M = factory($, fields, state);
 
@@ -353,6 +355,31 @@ setFields({ ast: 'EUR/USD', ent: '1.085', slo: '1.088' });
 M.maybeAutoDirection();
 eq(state.direction, 'Long', 'manual pin is respected by maybeAutoDirection');
 state.dirManual = false;
+
+// 10. Plausibility checks (warnings only). EUR/USD 8.33 lots @1.085 on 100k → 9.04x.
+let c = M.sizeChecks(8.33, 1.085, 0.0003, 100000, 100000, 100);
+approx(c.lev, 8.33 * 100000 * 1.085 / 100000, 1e-9, 'EUR/USD notional leverage');
+ok(!c.levOver && !c.tightSl, 'normal 3-pip EUR/USD trade: no warning');
+//     Typo: SL 1.0849 for entry 1.0850 → 1 pip → tight-SL warning.
+c = M.sizeChecks(25, 1.085, 0.0001, 100000, 100000, 100);
+ok(c.tightSl, '1-pip SL on EUR/USD flagged as tight');
+//     USD/JPY derived cv: notional = lots × FX_LOT regardless of price.
+c = M.sizeChecks(2, 150, 0.5, 100000 / 150, 100000, 100);
+approx(c.lev, 2, 1e-9, 'USD/JPY 2 lots on 100k → 2x');
+//     FTMO BTC at 1:3.3: 8.33 lots × 60000 = 500k on 100k → 5x → over.
+c = M.sizeChecks(8.33, 60000, 30, 1, 100000, 3.3);
+ok(c.levOver, 'FTMO BTC 5x exposure exceeds 1:3.3');
+//     No maxLev (custom) → never levOver.
+c = M.sizeChecks(1000, 60000, 30, 1, 100000, undefined);
+ok(!c.levOver, 'custom instrument without maxLev: no leverage warning');
+//     Every FTMO/Breakout preset except Custom carries band + maxLev.
+for (const [brk, list] of Object.entries(M.PRESETS)) {
+  for (const p of list) {
+    if (/^Custom/.test(p.s)) continue;
+    ok(Array.isArray(p.band) && p.band[0] < p.band[1], `${brk}/${p.s} has a valid band`);
+    ok(p.maxLev > 0, `${brk}/${p.s} has maxLev`);
+  }
+}
 
 /* =================== SUMMARY =================== */
 

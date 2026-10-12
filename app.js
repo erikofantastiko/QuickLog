@@ -22,35 +22,42 @@ var APP_VERSION = '1.0.0';
 // (USD is the base, e.g. USD/JPY, USD/CAD), a flagged cross-rate approximation otherwise.
 var PRESETS = {
   ftmo:[
-    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.5,2],tv:'OANDA:EURUSD'},
-    {s:'GBP/USD',base:'GBP',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.6,2.5],tv:'OANDA:GBPUSD'},
-    {s:'USD/JPY',base:'USD',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[50,300],tv:'OANDA:USDJPY'},
-    {s:'EUR/JPY',base:'EUR',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[50,300],tv:'OANDA:EURJPY'},
-    {s:'GBP/JPY',base:'GBP',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[80,400],tv:'OANDA:GBPJPY'},
-    {s:'EUR/GBP',base:'EUR',quote:'GBP',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.5,1.5],tv:'OANDA:EURGBP'},
-    {s:'AUD/USD',base:'AUD',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.3,1.5],tv:'OANDA:AUDUSD'},
-    {s:'USD/CAD',base:'USD',quote:'CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ CAD price)',band:[0.8,2],tv:'OANDA:USDCAD'},
-    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',band:[2000,100000],tv:'OANDA:NAS100USD'},
-    {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',band:[1000,30000],tv:'OANDA:SPX500USD'},
-    {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',band:[500,20000],tv:'OANDA:XAUUSD'},
-    {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',band:[5,500],tv:'OANDA:XAGUSD'},
-    {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',band:[1000,10000000],tv:'BITSTAMP:BTCUSD'},
-    {s:'ETH/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',band:[100,100000],tv:'BITSTAMP:ETHUSD'},
+    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.5,2],maxLev:100,tv:'OANDA:EURUSD'},
+    {s:'GBP/USD',base:'GBP',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.6,2.5],maxLev:100,tv:'OANDA:GBPUSD'},
+    {s:'USD/JPY',base:'USD',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[50,300],maxLev:100,tv:'OANDA:USDJPY'},
+    {s:'EUR/JPY',base:'EUR',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[50,300],maxLev:100,tv:'OANDA:EURJPY'},
+    {s:'GBP/JPY',base:'GBP',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[80,400],maxLev:100,tv:'OANDA:GBPJPY'},
+    {s:'EUR/GBP',base:'EUR',quote:'GBP',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.5,1.5],maxLev:100,tv:'OANDA:EURGBP'},
+    {s:'AUD/USD',base:'AUD',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.3,1.5],maxLev:100,tv:'OANDA:AUDUSD'},
+    {s:'USD/CAD',base:'USD',quote:'CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ CAD price)',band:[0.8,2],maxLev:100,tv:'OANDA:USDCAD'},
+    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',band:[2000,100000],maxLev:50,tv:'OANDA:NAS100USD'},
+    {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',band:[1000,30000],maxLev:50,tv:'OANDA:SPX500USD'},
+    {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',band:[500,20000],maxLev:50,tv:'OANDA:XAUUSD'},
+    {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',band:[5,500],maxLev:50,tv:'OANDA:XAGUSD'},
+    {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',band:[1000,10000000],maxLev:3.3,tv:'BITSTAMP:BTCUSD'},
+    {s:'ETH/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',band:[100,100000],maxLev:3.3,tv:'BITSTAMP:ETHUSD'},
     {s:'Custom…',cv:'',unit:'lots',step:0.01,hint:'enter contract value manually',tv:''}
   ],
   breakout:[
-    {s:'BTC',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1000,10000000],tv:'KRAKEN:BTCUSD'},
-    {s:'ETH',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[100,100000],tv:'KRAKEN:ETHUSD'},
-    {s:'SOL',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1,5000],tv:'KRAKEN:SOLUSD'},
-    {s:'XRP',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.05,100],tv:'KRAKEN:XRPUSD'},
-    {s:'ADA',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.01,50],tv:'KRAKEN:ADAUSD'},
-    {s:'AVAX',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1,1000],tv:'KRAKEN:AVAXUSD'},
-    {s:'LINK',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.5,1000],tv:'KRAKEN:LINKUSD'},
-    {s:'DOGE',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.001,10],tv:'KRAKEN:DOGEUSD'},
+    {s:'BTC',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1000,10000000],maxLev:10,tv:'KRAKEN:BTCUSD'},
+    {s:'ETH',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[100,100000],maxLev:5,tv:'KRAKEN:ETHUSD'},
+    {s:'SOL',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1,5000],maxLev:5,tv:'KRAKEN:SOLUSD'},
+    {s:'XRP',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.05,100],maxLev:5,tv:'KRAKEN:XRPUSD'},
+    {s:'ADA',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.01,50],maxLev:5,tv:'KRAKEN:ADAUSD'},
+    {s:'AVAX',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1,1000],maxLev:5,tv:'KRAKEN:AVAXUSD'},
+    {s:'LINK',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.5,1000],maxLev:5,tv:'KRAKEN:LINKUSD'},
+    {s:'DOGE',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.001,10],maxLev:5,tv:'KRAKEN:DOGEUSD'},
     {s:'Custom…',cv:1,unit:'coins',step:0.001,hint:'perp · size in coins',tv:''}
   ],
   custom:[{s:'Custom',cv:'',unit:'units',step:0.01,hint:'enter contract value manually',tv:''}]
 };
+
+// maxLev = broker's max account leverage for the instrument class (1:N), used
+// only for the plausibility warning, never for the size itself. ASSUMPTION per
+// web research 2026-10 (FTMO Standard account: FX 1:100, metals 1:50 since the
+// Feb/May 2026 updates, indices 1:50, crypto 1:3.3 — Swing accounts are lower;
+// Breakout: BTC 10x, ETH + listed alts 5x per program rules 29 Jul 2026).
+// Verify in MT5 / broker terms; custom instruments have none (no check).
 
 // FX standard lot notional — basis for entry-derived cv.
 var FX_LOT = 100000;
@@ -275,6 +282,22 @@ function calcSize(){
   return {riskAmt:riskAmt,dist:dist,vol:vol,rr:rr,rewardAmt:rewardAmt,tpWrongSide:tpWrongSide};
 }
 
+// Plausibility of a size, for warnings only (the size itself is untouched).
+// notional = vol × cv × entry is the ACCOUNT_CCY exposure for every preset kind:
+// quote=USD (cv=FX_LOT → lots×100k×price), derived cv (FX_LOT/entry → lots×100k),
+// indices/metals/crypto (cv per point → lots×cv×price). lev = notional / account.
+// tightSl: SL closer than 0.02 % of entry — typical of a mistyped level
+// (1.0849 for 1.0800) that sizes 10× too large.
+var TIGHT_SL_FRACTION = 0.0002;
+function sizeChecks(vol, entry, dist, cv, account, maxLev){
+  var lev = (account>0 && vol>0) ? (vol*cv*Math.abs(entry))/account : 0;
+  return {
+    lev: lev,
+    levOver: !!(maxLev>0 && lev>maxLev),
+    tightSl: !!(entry && dist/Math.abs(entry) < TIGHT_SL_FRACTION)
+  };
+}
+
 function renderSize(){
   syncContractValue();
   var p=currentPreset();
@@ -301,6 +324,13 @@ function renderSize(){
     warn = '<div class="sz-warn">Take Profit on wrong side for this entry/stop — check direction</div>';
   } else if(r.rr!=null && r.rr<1){
     warn = '<div class="sz-warn soft">R:R below 1 — reward smaller than risk</div>';
+  }
+  // Plausibility (independent of the warnings above): leverage beyond the
+  // broker max, or a suspiciously tight stop. Advisory — the size stays as is.
+  if(rv>0){
+    var chk=sizeChecks(rv, numOf('szEntry'), r.dist, numOf('cv'), getAccount(), p&&p.maxLev);
+    if(chk.levOver) warn += '<div class="sz-warn">Needs ~1:'+Math.ceil(chk.lev)+' leverage — above broker max 1:'+p.maxLev+'. Check SL / size</div>';
+    if(chk.tightSl) warn += '<div class="sz-warn">SL only '+(r.dist/Math.abs(numOf('szEntry'))*100).toFixed(3)+'% from entry — typo?</div>';
   }
   out.innerHTML=
     '<div class="sz-big"><div><span class="sz-vol">'+rv.toFixed(stepDecimals())+'</span><span class="sz-unit">'+unit+' · step '+st+'</span></div>'
