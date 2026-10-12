@@ -331,8 +331,9 @@ function getAccount(){
 // Log risk %: 'custom' select value falls back to the free-text field. Returns
 // the bare value (no '%') — copyForSheet/cardHtml append the unit. The sheet
 // column ORDER is unchanged; only the value source switches for custom.
+// Empty/unreadable custom value → '' (empty cell / '—'), never 'NaN%'.
 function getLogRisk(){
-  if($('rsk').value==='custom') return numOf('rskCustom');
+  if($('rsk').value==='custom'){ var v=numOf('rskCustom'); return isNaN(v)?'':v; }
   return $('rsk').value;
 }
 
@@ -395,7 +396,7 @@ function cardHtml(d){
     +'<div style="text-align:right"><span style="display:inline-block;padding:4px 12px;border-radius:10px;font-size:13px;font-weight:600;background:'+badgeBg+';color:'+badgeFg+'">'+badgeTx+'</span><div style="font-size:11px;color:#56565c;margin-top:6px">'+d.date+'</div></div></div>'
     +'<div style="height:1px;background:#2a2a2e;margin:14px 0"></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'+cell('Entry',esc(d.entry))+cell('Stop loss',esc(d.sl))+cell('Take profit',esc(d.tp))+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+big('R:R',d.rr?d.rr+'R':'—',rrColor)+big('Risk',d.risk+'%','#e4e4e7')+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+big('R:R',d.rr?d.rr+'R':'—',rrColor)+big('Risk',d.risk===''?'—':d.risk+'%','#e4e4e7')+'</div>'
     +extrasRow
     +(d.note?'<div style="margin-top:12px;padding:10px 12px;background:#0c0c0e;border-radius:8px;font-size:13px;color:#8a8a90;font-style:italic">'+esc(d.note)+'</div>':'');
 }
@@ -484,7 +485,7 @@ function copyForSheet(){
     sl:         $('slo').value,
     tp:         $('tpr').value,
     vol:        $('vol').value,
-    risk:       getLogRisk()+'%',
+    risk:       (function(r){ return r===''?'':r+'%'; })(getLogRisk()),
     riskUsd:    $('rskUsd').value,
     pnlUsd:     $('pnl').value,
     dir:        state.direction,
