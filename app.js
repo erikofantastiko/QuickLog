@@ -361,7 +361,10 @@ function readCard(){
 
 function logRR(){
   var e=numOf('ent'), s=numOf('slo'), t=numOf('tpr');
-  if(isNaN(e)||isNaN(s)||isNaN(t)||s===e) return null;
+  if(isNaN(e)||isNaN(s)||isNaN(t)||s===e||t===e) return null;
+  // Same rule as calcSize: a TP on the wrong side of entry (e.g. Long with TP
+  // below entry) has no R:R — Math.abs alone would show a plausible positive one.
+  if(Math.sign(e-s)!==Math.sign(t-e)) return null;
   return (Math.abs(t-e)/Math.abs(e-s)).toFixed(2);
 }
 
