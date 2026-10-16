@@ -43,9 +43,14 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   cv-Feld trägt volle Präzision (8 dp), sonst floort z. B. 666.67 statt 666.666… 1.50 auf 1.49.
   Feld bleibt editierbar = manueller Override. Bei Kontowechsel nur `ACCOUNT_CCY` ändern.
 - **Contract Sizes verifiziert (EU/classic FTMO, Stand 2026-06):** FX 100.000 Einheiten/Lot, Indizes
-  .cash Contract size 1 → $1/Punkt/Lot, XAU 100 oz, XAG 5000 oz, BTC/ETH 1 Coin — decken sich mit
+  .cash Contract size 1 → $1/Punkt/Lot, XAU 100 oz, XAG 5000 oz, BTC 1 Coin — decken sich mit
   FTMOs EU-Specs. Cross-Paare sind seit dem Kraken-Kurs exakt. Trotzdem im
   Zweifel in MT5 prüfen (Market Watch → Specification); jedes Instrument hat manuellen Override.
+- **ETH/USD = Kontraktgröße 10 (1 Lot = 10 ETH), nicht 1.** Per MT5-Screenshot 2026-10-16 bestätigt;
+  die Online-Recherche (2026-06, „1 Coin“) war falsch, alte Sizes waren 10× zu groß. **MT5 schlägt
+  jede Recherche.** BTC/USD (cv 1), US500, XAU, XAG sind noch NICHT gegen MT5 geprüft.
+- **Max-Volumen:** Presets mit `max` (EUR/USD 50, US100 1000, ETH/USD 5, aus MT5) warnen im Sizer,
+  wenn die Lots darüber liegen (MT5 lehnt die Order ab).
 - **Broker-Modelle:** FTMO = MT5 CFD, Sizing in Lots. Breakout = Crypto-Perps, Sizing in Coins
   (`coins = Risk$ / |Entry − SL|`, cv = 1), Kraken-Feeds.
 - **TD-API-Key nur in localStorage** (`quicklog_td_key`) — NIE im Code, PNG, Sheet oder
@@ -57,20 +62,20 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Kontraktgröße / Profit-Währung / Volumenschritt (das zeigt die MT5-iOS-App; Tick size/value nicht)
   gegen `presetSpec` (FX: `FX_LOT` + quote, sonst `preset.cv` + USD). Treffer ⇒ `state.verified[brk|inst]`,
   gilt nur solange Contract size + Währung des Presets gleich bleiben. `preset.mt5` = im Code
-  verifiziert (2026-10-16: EUR/USD + US100 per Screenshot, ETH/USD laut Erik).
+  verifiziert (2026-10-16: EUR/USD, US100, ETH/USD per Screenshot).
   Sheet-Export, `SHEET_COLUMNS` und Karten bleiben davon unberührt.
 
 ## Testen
 
 - Schnelle Syntaxprüfung: `node --check app.js` (die Logik liegt jetzt direkt in `app.js`, keine
   `<script>`-Extraktion mehr nötig).
-- Geld-Mathematik: `node test/sizing.test.mjs` — 125 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
+- Geld-Mathematik: `node test/sizing.test.mjs` — 131 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
   Mapping A–W, leere Formelspalten M/N/O/P, Live↔Backtest-Ausrichtung, `contractValueFor`
   statisch/derive/**cross exakt** EUR/JPY, GBP/JPY, EUR/GBP inkl. „ohne Kurs → NaN“, Sizing EUR/USD,
   JPY, GBP/JPY 1.50 & EUR/JPY 1.45, `roundVol`-Edges, `rTargets`, `twoStopPlan` inkl. Step-Split,
   `mt5SpecCheck`). Liest die Formeln/Werte direkt aus `app.js` (kein Replikat) → regrediert bei
   gebrochener Mathematik. Bei `const`/Arrow bricht die Extraktion laut (Testfehler, nie still grün).
-- Browser: `node test/ui.test.mjs` — 58 Checks, Playwright + Chromium headless (global `playwright`
+- Browser: `node test/ui.test.mjs` — 63 Checks, Playwright + Chromium headless (global `playwright`
   nötig, fehlt es ⇒ Exit 1). Eigener Static-Server, Kraken per `page.route` gemockt, alles andere
   Externe geblockt. Prüft Cross-Sizing, Kraken-Ausfall ⇒ kein Ergebnis, manuellen Kurs + Reload,
   R-Ziele, 2-Stop (Default aus, Toggle, Persistenz), MT5-Abgleich und „Copy for Sheet“

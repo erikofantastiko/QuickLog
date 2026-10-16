@@ -256,6 +256,21 @@ const SHEET_BASELINE = '\t16/10/2026 10:30\tEURUSD\t\t1.08500\t\t1.08300\t1.0890
   await ctx.close();
 }
 
+// 4b. ETH/USD: cv 10 (FTMO contract size), max-volume warning above 5 lots.
+{
+  kraken = {};
+  const { ctx, page } = await newPage();
+  await page.goto(BASE);
+  await setSizer(page, { inst: 'ETH/USD', entry: '2450', sl: '2400' });
+  eq(await page.inputValue('#cv'), '10', 'ETH/USD cv field = 10');
+  eq(await vol(page), '2.00', 'ETH/USD 2450→2400, 1 % ⇒ 2.00 lots');
+  ok(!(await szText(page)).includes('max volume'), 'no max-volume warning at 2.00 lots');
+  await page.fill('#szSL', '2440');
+  eq(await vol(page), '10.00', 'ETH/USD 10-point stop ⇒ 10.00 lots');
+  ok((await szText(page)).includes('Above MT5 max volume (5'), 'warns above MT5 max 5 lots');
+  await ctx.close();
+}
+
 // 5. "Copy for Sheet" stays byte-identical to the pre-change output (baseline captured on main
 //    with the same inputs and the clock pinned).
 {

@@ -19,7 +19,7 @@ var $ = function(id){ return document.getElementById(id); };
 var PRESETS = {
   ftmo:[
     // mt5: verified against Erik's FTMO MT5 Specification (Kontraktgröße 100 000 EUR, Profit USD, step 0.01).
-    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURUSD',mt5:'2026-10-16'},
+    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',max:50,tv:'OANDA:EURUSD',mt5:'2026-10-16'},
     {s:'GBP/USD',base:'GBP',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:GBPUSD'},
     {s:'USD/JPY',base:'USD',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:USDJPY'},
     {s:'EUR/JPY',base:'EUR',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:EURJPY'},
@@ -28,13 +28,15 @@ var PRESETS = {
     {s:'AUD/USD',base:'AUD',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:AUDUSD'},
     {s:'USD/CAD',base:'USD',quote:'CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ CAD price)',tv:'OANDA:USDCAD'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — US100.cash Kontraktgröße 1, Profit USD, step 0.01, commission 0.
-    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,hint:'$1 / point / lot',tv:'OANDA:NAS100USD',mt5:'2026-10-16'},
+    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,max:1000,hint:'$1 / point / lot',tv:'OANDA:NAS100USD',mt5:'2026-10-16'},
     {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:SPX500USD'},
     {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD'},
     {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',tv:'OANDA:XAGUSD'},
     {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',tv:'BITSTAMP:BTCUSD'},
     // mt5: checked by Erik in MT5 2026-10-16 (no screenshot) — contract size 1, profit USD.
-    {s:'ETH/USD',cv:1,unit:'lots',step:0.01,hint:'1 coin per lot',tv:'BITSTAMP:ETHUSD',mt5:'2026-10-16'},
+    // mt5: FTMO MT5 screenshot 2026-10-16 — Kontraktgröße 10 (NOT 1: 1 lot = 10 ETH), Profit USD, step 0.01,
+    // max 5 lots, commission 0.0325 % per side. Was cv 1 before ⇒ sizes were 10× too large.
+    {s:'ETH/USD',cv:10,unit:'lots',step:0.01,max:5,hint:'1 lot = 10 ETH → $10 / $1 move',tv:'BITSTAMP:ETHUSD',mt5:'2026-10-16'},
     {s:'Custom…',cv:'',unit:'lots',step:0.01,hint:'enter contract value manually',tv:''}
   ],
   breakout:[
@@ -327,6 +329,8 @@ function renderSize(){
     warn = '<div class="sz-warn">Invalid size — check inputs</div>';
   } else if(rv<=0){
     warn = '<div class="sz-warn">Below minimum size (step '+st+') — increase risk or account</div>';
+  } else if(p && p.max && rv>p.max+1e-9){
+    warn = '<div class="sz-warn">Above MT5 max volume ('+p.max+' '+unit+' per order) — MT5 rejects this; reduce risk or split the order</div>';
   } else if(r.tpWrongSide){
     warn = '<div class="sz-warn">Take Profit on wrong side for this entry/stop — check direction</div>';
   } else if(r.rr!=null && r.rr<1){

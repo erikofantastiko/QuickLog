@@ -359,8 +359,18 @@ c = M.mt5SpecCheck(US100, '1', 'USD', '0.01');
 ok(c && c.ok, 'US100 contract size 1, USD ⇒ matches cv 1');
 c = M.mt5SpecCheck(US100, '10', 'USD', '');
 ok(c && !c.ok && c.issues.length === 1 && c.issues[0].mt5 === 10, 'US100 contract size 10 ⇒ size mismatch');
+//     ETH/USD real spec (screenshot): Kontraktgröße 10 — the old preset cv 1 was 10× off.
+eq(ETHUSD.cv, 10, 'ETH/USD cv == 10 (FTMO contract size 10 ETH per lot)');
+ok(M.mt5SpecCheck(ETHUSD, '10', 'USD', '0.01').ok, 'ETH/USD real MT5 spec (10, USD, 0.01) matches preset');
 c = M.mt5SpecCheck(ETHUSD, '1', '', '');
-ok(c && c.ok, 'ETH/USD contract size 1 alone ⇒ matches (ccy/step optional)');
+ok(c && !c.ok && c.issues[0].field === 'cs', 'ETH/USD contract size 1 ⇒ mismatch (the old wrong value)');
+//     Sizing: 1 % of 100k, ETH 2450 → 2400 ⇒ 1000 / (50 × 10) = 2.00 lots (was 20 with cv 1).
+setFields({ brk: 'ftmo', inst: 'ETH/USD', accPreset: '100000', szRisk: '1.00',
+  szEntry: '2450', szSL: '2400', szTP: '', cv: String(ETHUSD.cv) });
+approx(M.roundVol(M.calcSize().vol), 2, 1e-9, 'ETH/USD 2450→2400, 1 % ⇒ 2.00 lots');
+eq(ETHUSD.max, 5, 'ETH/USD max volume 5 lots (MT5)');
+eq(EURUSD.max, 50, 'EUR/USD max volume 50 lots (MT5)');
+eq(US100.max, 1000, 'US100 max volume 1000 lots (MT5)');
 c = M.mt5SpecCheck(EURUSD, '100000', 'USD', '0.1');
 ok(c && !c.ok && c.issues[0].field === 'step', 'volume step 0.1 vs preset 0.01 ⇒ step mismatch');
 eq(M.mt5SpecCheck(EURUSD, '', 'USD', '0.01'), null, 'missing contract size ⇒ null');

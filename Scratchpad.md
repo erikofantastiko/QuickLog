@@ -40,7 +40,7 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   Ergebnis. Nebenbei: cv-Feld auf 8 dp, vorher floorte z. B. USD/JPY 150→149 bei 1 % auf 1.49 statt
   1.50. Übernommen von Yolo: R-Ziele + 2-Stop-Plan (ausgeblendet). MT5-Abgleich über Kontraktgröße/Profit-Währung/
   Volumenschritt (MT5-iOS zeigt keine Tick-Werte) mit „verified“-Haken; EUR/USD per Screenshot im Code
-  verifiziert. Tests 55→125, neuer Browser-Test `test/ui.test.mjs` (58). SW-Cache v2.
+  verifiziert. Tests 55→131, neuer Browser-Test `test/ui.test.mjs` (63). SW-Cache v2.
 
 ## Backlog (priorisiert)
 
@@ -108,10 +108,13 @@ importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Fra
 
 - **FTMO Contract Values** — ✅ via Online-Recherche gegen EU/classic FTMO verifiziert (Stand
   2026-06). Cross-Paare seit 2026-10 exakt über BASE→USD-Kurs (Kraken oder manuell).
-- **MT5 verifiziert (2026-10-16, im Code als `preset.mt5`):** EUR/USD (Screenshot: 100 000 EUR, Profit
-  USD, Schritt 0.01, Kommission 2.5 USD/Lot je Seite), US100.cash (Screenshot: Kontraktgröße 1, Profit
-  USD, Schritt 0.01, Kommission 0, Tick-Größe/-Wert in MT5 leer = CFD-Index-Modus), ETH/USD (laut Erik
-  geprüft, kein Screenshot). Restliche Instrumente: per „MT5 check“ im Sizer bei Bedarf.
+- **MT5 verifiziert (2026-10-16, Screenshots, im Code als `preset.mt5`):** EUR/USD (100 000 EUR, Profit
+  USD, Schritt 0.01, max 50, Kommission 2.5 USD/Lot je Seite), US100.cash (Kontraktgröße 1, Profit USD,
+  Schritt 0.01, max 1000, Kommission 0, Tick-Größe/-Wert leer = CFD-Modus), **ETH/USD Kontraktgröße 10**
+  (Profit USD, Schritt 0.01, max 5, Kommission 0.0325 % je Seite). ETH war mit cv 1 gesized ⇒ **10× zu
+  große Lots**, jetzt cv 10. Max-Volumen-Warnung ergänzt.
+- **Noch nicht gegen MT5 geprüft:** BTC/USD (cv 1, nach dem ETH-Befund verdächtig), US500, XAU/USD,
+  XAG/USD, GBP/USD, AUD/USD, JPY-Paare, USD/CAD. Prüfen per „MT5 check“ oder Screenshot.
 - **Offene Frage Kommission:** FTMO EUR/USD laut MT5 2.5 USD pro Lot je Seite (Ein-/Ausgang), also
   5 USD/Lot round trip. Der Sizer rechnet ohne Kommission ⇒ echter Verlust am SL liegt leicht über dem
   Ziel (bei 5 Pip SL ≈ +1 %, bei 20 Pip ≈ +0,25 %). Option: `vol = riskAmt / (dist×cv + comm)`.
