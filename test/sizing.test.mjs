@@ -348,7 +348,9 @@ eq(M.parseSpecNum('100 000 EUR'), 100000, 'parseSpecNum("100 000 EUR") == 100000
 eq(M.parseSpecNum('0,01'), 0.01, 'parseSpecNum("0,01") == 0.01');
 let c = M.mt5SpecCheck(EURUSD, '100 000 EUR', 'USD', '0.01');
 ok(c && c.ok, 'EUR/USD MT5 spec (100 000 EUR, USD, 0.01) matches preset');
-eq(EURUSD.mt5, '2026-10-16', 'EUR/USD carries the MT5-verified date in the preset');
+for (const p of [EURUSD, US100, ETHUSD]) eq(p.mt5, '2026-10-16', `${p.s} carries the MT5-verified date in the preset`);
+//     US100.cash real spec (screenshot): Kontraktgröße 1, Profit-Währung USD, Volumenschritt 0.01.
+ok(M.mt5SpecCheck(US100, '1', 'USD', '0.01').ok, 'US100 real MT5 spec matches preset');
 c = M.mt5SpecCheck(USDJPY, '100000', 'JPY', '0.01');
 ok(c && c.ok, 'USD/JPY spec (100000, JPY) matches (FX lot, quote currency)');
 c = M.mt5SpecCheck(USDJPY, '100000', 'USD', '');

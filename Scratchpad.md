@@ -40,7 +40,7 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   Ergebnis. Nebenbei: cv-Feld auf 8 dp, vorher floorte z. B. USD/JPY 150→149 bei 1 % auf 1.49 statt
   1.50. Übernommen von Yolo: R-Ziele + 2-Stop-Plan (ausgeblendet). MT5-Abgleich über Kontraktgröße/Profit-Währung/
   Volumenschritt (MT5-iOS zeigt keine Tick-Werte) mit „verified“-Haken; EUR/USD per Screenshot im Code
-  verifiziert. Tests 55→122, neuer Browser-Test `test/ui.test.mjs` (57). SW-Cache v2.
+  verifiziert. Tests 55→125, neuer Browser-Test `test/ui.test.mjs` (58). SW-Cache v2.
 
 ## Backlog (priorisiert)
 
@@ -108,9 +108,10 @@ importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Fra
 
 - **FTMO Contract Values** — ✅ via Online-Recherche gegen EU/classic FTMO verifiziert (Stand
   2026-06). Cross-Paare seit 2026-10 exakt über BASE→USD-Kurs (Kraken oder manuell).
-- **Offen bei Erik:** US100 und ETH/USD per „MT5 check“ abhaken (Kontraktgröße, Profit-Währung,
-  Volumenschritt aus der MT5 Specification). Erwartet: jeweils 1 / USD. EUR/USD ✅ (Screenshot 2026-10-16:
-  100 000 EUR, Profit USD, Schritt 0.01, Mindestvolumen 0.01).
+- **MT5 verifiziert (2026-10-16, im Code als `preset.mt5`):** EUR/USD (Screenshot: 100 000 EUR, Profit
+  USD, Schritt 0.01, Kommission 2.5 USD/Lot je Seite), US100.cash (Screenshot: Kontraktgröße 1, Profit
+  USD, Schritt 0.01, Kommission 0, Tick-Größe/-Wert in MT5 leer = CFD-Index-Modus), ETH/USD (laut Erik
+  geprüft, kein Screenshot). Restliche Instrumente: per „MT5 check“ im Sizer bei Bedarf.
 - **Offene Frage Kommission:** FTMO EUR/USD laut MT5 2.5 USD pro Lot je Seite (Ein-/Ausgang), also
   5 USD/Lot round trip. Der Sizer rechnet ohne Kommission ⇒ echter Verlust am SL liegt leicht über dem
   Ziel (bei 5 Pip SL ≈ +1 %, bei 20 Pip ≈ +0,25 %). Option: `vol = riskAmt / (dist×cv + comm)`.

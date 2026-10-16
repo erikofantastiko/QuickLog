@@ -27,12 +27,14 @@ var PRESETS = {
     {s:'EUR/GBP',base:'EUR',quote:'GBP',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURGBP'},
     {s:'AUD/USD',base:'AUD',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:AUDUSD'},
     {s:'USD/CAD',base:'USD',quote:'CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ CAD price)',tv:'OANDA:USDCAD'},
-    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:NAS100USD'},
+    // mt5: FTMO MT5 screenshot 2026-10-16 — US100.cash Kontraktgröße 1, Profit USD, step 0.01, commission 0.
+    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,hint:'$1 / point / lot',tv:'OANDA:NAS100USD',mt5:'2026-10-16'},
     {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:SPX500USD'},
     {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD'},
     {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',tv:'OANDA:XAGUSD'},
     {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',tv:'BITSTAMP:BTCUSD'},
-    {s:'ETH/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',tv:'BITSTAMP:ETHUSD'},
+    // mt5: checked by Erik in MT5 2026-10-16 (no screenshot) — contract size 1, profit USD.
+    {s:'ETH/USD',cv:1,unit:'lots',step:0.01,hint:'1 coin per lot',tv:'BITSTAMP:ETHUSD',mt5:'2026-10-16'},
     {s:'Custom…',cv:'',unit:'lots',step:0.01,hint:'enter contract value manually',tv:''}
   ],
   breakout:[

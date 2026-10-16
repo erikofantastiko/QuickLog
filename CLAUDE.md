@@ -57,20 +57,20 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Kontraktgröße / Profit-Währung / Volumenschritt (das zeigt die MT5-iOS-App; Tick size/value nicht)
   gegen `presetSpec` (FX: `FX_LOT` + quote, sonst `preset.cv` + USD). Treffer ⇒ `state.verified[brk|inst]`,
   gilt nur solange Contract size + Währung des Presets gleich bleiben. `preset.mt5` = im Code
-  verifiziert (EUR/USD, 2026-10-16, Screenshot).
+  verifiziert (2026-10-16: EUR/USD + US100 per Screenshot, ETH/USD laut Erik).
   Sheet-Export, `SHEET_COLUMNS` und Karten bleiben davon unberührt.
 
 ## Testen
 
 - Schnelle Syntaxprüfung: `node --check app.js` (die Logik liegt jetzt direkt in `app.js`, keine
   `<script>`-Extraktion mehr nötig).
-- Geld-Mathematik: `node test/sizing.test.mjs` — 122 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
+- Geld-Mathematik: `node test/sizing.test.mjs` — 125 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
   Mapping A–W, leere Formelspalten M/N/O/P, Live↔Backtest-Ausrichtung, `contractValueFor`
   statisch/derive/**cross exakt** EUR/JPY, GBP/JPY, EUR/GBP inkl. „ohne Kurs → NaN“, Sizing EUR/USD,
   JPY, GBP/JPY 1.50 & EUR/JPY 1.45, `roundVol`-Edges, `rTargets`, `twoStopPlan` inkl. Step-Split,
   `mt5SpecCheck`). Liest die Formeln/Werte direkt aus `app.js` (kein Replikat) → regrediert bei
   gebrochener Mathematik. Bei `const`/Arrow bricht die Extraktion laut (Testfehler, nie still grün).
-- Browser: `node test/ui.test.mjs` — 57 Checks, Playwright + Chromium headless (global `playwright`
+- Browser: `node test/ui.test.mjs` — 58 Checks, Playwright + Chromium headless (global `playwright`
   nötig, fehlt es ⇒ Exit 1). Eigener Static-Server, Kraken per `page.route` gemockt, alles andere
   Externe geblockt. Prüft Cross-Sizing, Kraken-Ausfall ⇒ kein Ergebnis, manuellen Kurs + Reload,
   R-Ziele, 2-Stop (Default aus, Toggle, Persistenz), MT5-Abgleich und „Copy for Sheet“

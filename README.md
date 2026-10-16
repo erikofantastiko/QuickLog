@@ -41,11 +41,11 @@ official FTMO spec sheet. Formula used: `CV = Risk$ / (Lot × SL-distance)`.
 | EUR/USD, GBP/USD, AUD/USD | 100,000 | standard lot |
 | USD/JPY, USD/CAD | 100,000 ÷ entry price (auto-derived) | standard lot, exact |
 | EUR/JPY, GBP/JPY, EUR/GBP (crosses) | 100,000 ÷ entry × BASE→USD rate | standard lot, exact |
-| US100 (NDX) | 1 | logged FTMO trades + $1/point confirmation |
+| US100 (NDX) | 1 | FTMO MT5: US100.cash contract size 1, profit USD |
 | US500 (SPX) | 1 | FTMO CFD logic, analogous to US100 |
 | XAU/USD | 100 | 1 lot = 100 oz |
 | XAG/USD | 5000 | 1 lot = 5000 oz |
-| BTC/USD, ETH/USD | 1 | logged FTMO trades (≈1 unit/lot) |
+| BTC/USD, ETH/USD | 1 | logged FTMO trades; ETH/USD checked in MT5 (contract size 1) |
 
 **Verify against MT5 before trusting blindly.** FTMO does not publish a central CV table; the exact
 value is in the platform: Market Watch (Ctrl+M) → right-click instrument → Specification. If a value
@@ -68,8 +68,9 @@ Specification: Kontraktgröße (Contract size), Profit-Währung (Profit currency
 (Volume step). They are compared with the preset (FX: 100,000 units and the quote currency;
 everything else: contract size = CV in USD). A match marks the instrument "✓ MT5 verified <date>"
 (stored locally); a mismatch is spelled out, and for USD-profit non-FX instruments "Use MT5 value"
-sets the contract size as manual CV override. EUR/USD is verified in the code from a real FTMO MT5
-screenshot (100 000 EUR, profit USD, step 0.01). Expected for US100 and ETH/USD: contract size 1, USD.
+sets the contract size as manual CV override. EUR/USD, US100 and ETH/USD are marked verified in the
+code (FTMO MT5, 2026-10-16). Note: MT5 shows Tick size/Tick value as 0 for index CFDs (US100.cash);
+contract size is the field that counts.
 
 **R targets & 2-stop plan.** The sizer result lists price and $ P&L at 1/2/3/5/10R (with the
 rounded size). A 2-stop plan (half out at 0.5R, rest at the SL → total loss 0.75R; size is not
