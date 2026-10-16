@@ -306,6 +306,46 @@ const SHEET_BASELINE = '\t16/10/2026 10:30\tEURUSD\t\t1.08500\t\t1.08300\t1.0890
   await ctx.close();
 }
 
+// 6. UI language: everything the user sees is English. Scans visible text, placeholders,
+//    labels and the trade-card preview on both tabs (MT5 check open, a result filled in),
+//    plus every non-comment string literal in app.js (toasts, warnings, dialogs).
+{
+  const GERMAN = /[äöüÄÖÜß]|\b(Ergebnis|Emotionen|Alles|Bild|kopiert|Metalle|leere|Felder|einfügen|Kontraktgröße)\b/;
+  kraken = { EUR: 1.17 };
+  const { ctx, page } = await newPage();
+  await page.goto(BASE);
+  await setSizer(page, { inst: 'EUR/JPY', entry: '170.00', sl: '169.00' });
+  await page.click('#stopTwo');
+  await page.click('#mt5Toggle');
+  const uiText = async () => page.evaluate(() => {
+    const parts = [document.title, document.body.innerText];
+    document.querySelectorAll('[placeholder],[aria-label],[title]').forEach((e) =>
+      parts.push(e.getAttribute('placeholder') || '', e.getAttribute('aria-label') || '', e.getAttribute('title') || ''));
+    document.querySelectorAll('option').forEach((o) => parts.push(o.textContent));
+    return parts.join('\n');
+  });
+  let txt = await uiText();
+  let hit = txt.match(GERMAN);
+  ok(!hit, 'Position Sizer UI is English' + (hit ? ` (found "${hit[0]}")` : ''));
+  await page.click('#tab-log');
+  await page.fill('#ast', 'EURUSD');
+  await page.fill('#exi', '1.09');
+  await page.selectOption('#res', 'Win');
+  txt = await uiText();
+  hit = txt.match(GERMAN);
+  ok(!hit, 'Trade Log UI incl. card preview is English' + (hit ? ` (found "${hit[0]}")` : ''));
+  ok((await page.textContent('#prv')).includes('Result'), 'trade card labels the result cell "Result"');
+  eq(await page.textContent('label[for="res"]'), 'Result', 'Log label "Result"');
+  eq(await page.textContent('label[for="emo"]'), 'Emotions', 'Log label "Emotions"');
+  await ctx.close();
+
+  const src = (await readFile(join(ROOT, 'app.js'), 'utf8'))
+    .replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((l) => l.replace(/^\s*\/\/.*$/, '').replace(/\s\/\/.*$/, '')).join('\n');
+  const lits = src.match(/'(?:[^'\\\n]|\\.)*'/g) || [];
+  const bad = lits.filter((l) => GERMAN.test(l));
+  eq(bad.length, 0, 'no German string literals in app.js' + (bad.length ? ` (${bad.slice(0, 3).join(', ')})` : ''));
+}
+
 /* =================== SUMMARY =================== */
 
 await browser.close();

@@ -97,10 +97,10 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Formeln/Werte direkt aus dem Quelltext (kein hartkodiertes Replikat) → regrediert bei gebrochener Mathematik.
   Quelle ist seit dem PWA-Split `app.js` (nicht mehr `index.html`). Bei `const`/Arrow bricht die
   Extraktion laut (Testfehler, nie still grün).
-- Browser: `node test/ui.test.mjs` — 70 Checks, Playwright + Chromium headless (global `playwright`
+- Browser: `node test/ui.test.mjs` — 76 Checks, Playwright + Chromium headless (global `playwright`
   nötig, fehlt es ⇒ Exit 1). Eigener Static-Server, Kraken per `page.route` gemockt, alles andere
   Externe geblockt. Prüft Cross-Sizing, Kraken-Ausfall ⇒ kein Ergebnis, manuellen Kurs + Reload,
-  R-Ziele, 2-Stop-Schalter (Default Single, an/aus, Persistenz), MT5-Abgleich und „Copy for Sheet“
+  R-Ziele, 2-Stop-Schalter (Default Single, an/aus, Persistenz), MT5-Abgleich, UI durchgehend Englisch (kein deutscher Text sichtbar oder als String in `app.js`) und „Copy for Sheet“
   byte-identisch zur Baseline von vor der Änderung.
 - Voller Test: lokal servieren (`npx serve` / `python -m http.server`) und im Browser durchklicken.
   Persistenz: ausfüllen → reload → Felder bleiben.
