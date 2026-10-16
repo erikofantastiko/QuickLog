@@ -38,8 +38,9 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   geschlossen: Crosses ohne USD (EUR/JPY, GBP/JPY, EUR/GBP) wurden mit `FX_LOT/entry` in Basiswährung
   gesized (+17 % bis +30 % Risiko). Jetzt `× BASE→USD` aus Kraken-Ticker oder manuell, ohne Kurs kein
   Ergebnis. Nebenbei: cv-Feld auf 8 dp, vorher floorte z. B. USD/JPY 150→149 bei 1 % auf 1.49 statt
-  1.50. Übernommen von Yolo: R-Ziele + 2-Stop-Plan (ausgeblendet). MT5-Abgleich (Tick value/Tick size)
-  mit „verified“-Haken. Tests 55→119, neuer Browser-Test `test/ui.test.mjs` (52). SW-Cache v2.
+  1.50. Übernommen von Yolo: R-Ziele + 2-Stop-Plan (ausgeblendet). MT5-Abgleich über Kontraktgröße/Profit-Währung/
+  Volumenschritt (MT5-iOS zeigt keine Tick-Werte) mit „verified“-Haken; EUR/USD per Screenshot im Code
+  verifiziert. Tests 55→122, neuer Browser-Test `test/ui.test.mjs` (57). SW-Cache v2.
 
 ## Backlog (priorisiert)
 
@@ -107,8 +108,13 @@ importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Fra
 
 - **FTMO Contract Values** — ✅ via Online-Recherche gegen EU/classic FTMO verifiziert (Stand
   2026-06). Cross-Paare seit 2026-10 exakt über BASE→USD-Kurs (Kraken oder manuell).
-- **Offen bei Erik:** ETH/USD, US100, EUR/USD im Sizer per „MT5 check“ abhaken (Tick size/Tick value aus
-  MT5 Specification). Erwartet: EUR/USD 0.00001/1, US100 0.01/0.01, ETH/USD 0.01/0.01.
+- **Offen bei Erik:** US100 und ETH/USD per „MT5 check“ abhaken (Kontraktgröße, Profit-Währung,
+  Volumenschritt aus der MT5 Specification). Erwartet: jeweils 1 / USD. EUR/USD ✅ (Screenshot 2026-10-16:
+  100 000 EUR, Profit USD, Schritt 0.01, Mindestvolumen 0.01).
+- **Offene Frage Kommission:** FTMO EUR/USD laut MT5 2.5 USD pro Lot je Seite (Ein-/Ausgang), also
+  5 USD/Lot round trip. Der Sizer rechnet ohne Kommission ⇒ echter Verlust am SL liegt leicht über dem
+  Ziel (bei 5 Pip SL ≈ +1 %, bei 20 Pip ≈ +0,25 %). Option: `vol = riskAmt / (dist×cv + comm)`.
+  Ändert die Sizing-Invariante ⇒ nur mit Eriks Ja.
 - **Annahme:** Kraken liefert `Ticker?pair=EURUSD` / `GBPUSD` (Spot-FX, ZEURZUSD/ZGBPZUSD). Aus der
   Cloud-Session nicht erreichbar (Proxy), nur gemockt getestet. Einmal live prüfen; fällt es aus,
   bleibt das manuelle Feld.

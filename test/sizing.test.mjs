@@ -109,7 +109,9 @@ const pieces = [
   extractFn('priceDecimals'),
   extractFn('rTargets'),
   extractFn('twoStopPlan'),
-  extractFn('mt5CvCheck')
+  extractFn('parseSpecNum'),
+  extractFn('presetSpec'),
+  extractFn('mt5SpecCheck')
 ];
 
 // Mutable field map standing in for the DOM inputs/selects.
@@ -121,7 +123,7 @@ const $ = (id) => ({ value: id in fields ? fields[id] : '' });
 const factory = new Function('$', 'fields', `
   ${pieces.join('\n')}
   return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize,
-           crossBase, R_MULTIPLES, priceDecimals, rTargets, twoStopPlan, mt5CvCheck };
+           crossBase, R_MULTIPLES, priceDecimals, rTargets, twoStopPlan, parseSpecNum, presetSpec, mt5SpecCheck };
 `);
 const M = factory($, fields);
 
@@ -340,21 +342,28 @@ eq(M.priceDecimals('1.08500'), 5, 'priceDecimals("1.08500") == 5');
 eq(M.priceDecimals('195'), 2, 'priceDecimals("195") == 2 (min)');
 eq(M.priceDecimals('0,1234567'), 6, 'priceDecimals("0,1234567") == 6 (max, comma)');
 
-// 10. MT5 check — cv = Tick value / Tick size, ok within 1 %. Known FTMO specs.
-let c = M.mt5CvCheck('0.00001', '1', '100000');
-ok(c && c.ok, 'MT5 EUR/USD tick 0.00001 / value 1 ⇒ cv 100000 matches');
-approx(c.cvMt5, 100000, 1e-6, 'MT5 EUR/USD cvMt5 == 100000');
-c = M.mt5CvCheck('0.01', '0.01', String(US100.cv));
-ok(c && c.ok, 'MT5 US100 tick 0.01 / value 0.01 ⇒ cv 1 matches preset');
-c = M.mt5CvCheck('0.01', '0.01', String(ETHUSD.cv));
-ok(c && c.ok, 'MT5 ETH/USD tick 0.01 / value 0.01 ⇒ cv 1 matches preset');
-c = M.mt5CvCheck('0.01', '0.1', '1');
-ok(c && !c.ok, 'MT5 cv 10 vs QuickLog 1 ⇒ mismatch');
-approx(c.diffPct, -90, 1e-9, 'MT5 mismatch diff −90 %');
-ok(M.mt5CvCheck('0.01', '0.010099', '1').ok, 'MT5 within 1 % ⇒ ok');
-ok(!M.mt5CvCheck('0.01', '0.0102', '1').ok, 'MT5 2 % off ⇒ not ok');
-eq(M.mt5CvCheck('', '1', '1'), null, 'MT5 missing tick size ⇒ null');
-eq(M.mt5CvCheck('0', '1', '1'), null, 'MT5 zero tick size ⇒ null');
+// 10. MT5 check — compares MT5 Specification (Kontraktgröße / Profit-Währung / Volumenschritt)
+//     with the preset. EUR/USD values are Erik's real FTMO MT5 screenshot (2026-10-16).
+eq(M.parseSpecNum('100 000 EUR'), 100000, 'parseSpecNum("100 000 EUR") == 100000 (MT5 copy)');
+eq(M.parseSpecNum('0,01'), 0.01, 'parseSpecNum("0,01") == 0.01');
+let c = M.mt5SpecCheck(EURUSD, '100 000 EUR', 'USD', '0.01');
+ok(c && c.ok, 'EUR/USD MT5 spec (100 000 EUR, USD, 0.01) matches preset');
+eq(EURUSD.mt5, '2026-10-16', 'EUR/USD carries the MT5-verified date in the preset');
+c = M.mt5SpecCheck(USDJPY, '100000', 'JPY', '0.01');
+ok(c && c.ok, 'USD/JPY spec (100000, JPY) matches (FX lot, quote currency)');
+c = M.mt5SpecCheck(USDJPY, '100000', 'USD', '');
+ok(c && !c.ok && c.issues[0].field === 'ccy', 'USD/JPY with profit USD ⇒ currency mismatch');
+c = M.mt5SpecCheck(US100, '1', 'USD', '0.01');
+ok(c && c.ok, 'US100 contract size 1, USD ⇒ matches cv 1');
+c = M.mt5SpecCheck(US100, '10', 'USD', '');
+ok(c && !c.ok && c.issues.length === 1 && c.issues[0].mt5 === 10, 'US100 contract size 10 ⇒ size mismatch');
+c = M.mt5SpecCheck(ETHUSD, '1', '', '');
+ok(c && c.ok, 'ETH/USD contract size 1 alone ⇒ matches (ccy/step optional)');
+c = M.mt5SpecCheck(EURUSD, '100000', 'USD', '0.1');
+ok(c && !c.ok && c.issues[0].field === 'step', 'volume step 0.1 vs preset 0.01 ⇒ step mismatch');
+eq(M.mt5SpecCheck(EURUSD, '', 'USD', '0.01'), null, 'missing contract size ⇒ null');
+eq(M.mt5SpecCheck(EURUSD, '0', 'USD', ''), null, 'zero contract size ⇒ null');
+eq(M.presetSpec(EURGBP).ccy, 'GBP', 'presetSpec(EUR/GBP) profit currency GBP');
 
 /* =================== SUMMARY =================== */
 

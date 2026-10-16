@@ -210,33 +210,45 @@ const SHEET_BASELINE = '\t16/10/2026 10:30\tEURUSD\t\t1.08500\t\t1.08300\t1.0890
   kraken = {};
   const { ctx, page } = await newPage();
   await page.goto(BASE);
-  await setSizer(page, { inst: 'US100 (NDX)', entry: '20000', sl: '19950' });
+  await setSizer(page, { inst: 'EUR/USD', entry: '1.08500', sl: '1.08300' });
+  ok((await page.textContent('#cvHint')).includes('MT5 verified 2026-10-16'), 'EUR/USD verified from the preset (real MT5 screenshot)');
+
+  await page.selectOption('#inst', 'US100 (NDX)');
+  await page.fill('#szEntry', '20000'); await page.fill('#szSL', '19950');
+  ok(!(await page.textContent('#cvHint')).includes('MT5 verified'), 'US100 not verified before the check');
   ok(!(await page.isVisible('#mt5Wrap')), 'MT5 check collapsed by default');
   await page.click('#mt5Toggle');
-  await page.fill('#mt5TickSize', '0.01');
-  await page.fill('#mt5TickValue', '0.01');
-  ok((await page.textContent('#mt5Out')).includes('matches'), 'US100 tick 0.01/0.01 ⇒ matches');
+  await page.fill('#mt5Cs', '1');
+  await page.fill('#mt5Ccy', 'usd');
+  eq(await page.inputValue('#mt5Ccy'), 'USD', 'profit currency is upper-cased');
+  ok((await page.textContent('#mt5Out')).includes('Matches MT5'), 'US100 contract size 1 / USD ⇒ matches');
   ok((await page.textContent('#cvHint')).includes('MT5 verified'), 'US100 hint shows MT5 verified');
   await page.reload();
   ok((await page.textContent('#cvHint')).includes('MT5 verified'), 'verified mark survives reload');
 
-  // Stale tick inputs must not verify the next instrument.
+  // Stale inputs must not verify the next instrument.
   await page.click('#mt5Toggle');
-  await page.fill('#mt5TickSize', '0.01');
-  await page.fill('#mt5TickValue', '0.01');
+  await page.fill('#mt5Cs', '1');
   await page.selectOption('#inst', 'ETH/USD');
-  eq(await page.inputValue('#mt5TickSize'), '', 'instrument change clears MT5 tick size');
+  eq(await page.inputValue('#mt5Cs'), '', 'instrument change clears MT5 contract size');
   ok(!(await page.textContent('#cvHint')).includes('MT5 verified'), 'ETH/USD not verified by stale inputs');
 
-  // Mismatch path.
+  // Mismatch path: XAU preset 100 oz, MT5 says 10.
   await page.selectOption('#inst', 'XAU/USD');
-  await page.fill('#mt5TickSize', '0.01');
-  await page.fill('#mt5TickValue', '0.1');
+  await page.fill('#mt5Cs', '10');
   const out = await page.textContent('#mt5Out');
-  ok(out.includes('≠') && out.includes('+900.0'), 'XAU mismatch (QuickLog 100 vs MT5 10) is flagged with +900 %');
+  ok(out.includes('MT5 10') && out.includes('QuickLog 100'), 'XAU contract size mismatch is spelled out');
   await page.click('#mt5Use');
   eq(await page.inputValue('#cv'), '10', '"Use MT5 value" writes cv 10');
-  ok((await page.textContent('#mt5Out')).includes('matches'), 'after "Use MT5 value" the check matches');
+  ok((await page.textContent('#mt5Out')).includes('manual override'), 'confirms cv is now a manual override');
+
+  // FX: wrong profit currency is flagged, no cv button (cv is derived for FX).
+  await page.selectOption('#inst', 'USD/JPY');
+  await page.fill('#mt5Cs', '100000');
+  await page.fill('#mt5Ccy', 'USD');
+  const fx = await page.textContent('#mt5Out');
+  ok(fx.includes('Profit currency') && fx.includes('QuickLog JPY'), 'USD/JPY profit currency mismatch flagged');
+  eq(await page.locator('#mt5Use').count(), 0, 'no "Use MT5 value" for FX pairs');
   await ctx.close();
 }
 

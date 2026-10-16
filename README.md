@@ -63,11 +63,13 @@ public ticker and shown in the "EUR→USD rate" field; you can type your own (pi
 the field to auto-fetch again). Without a rate the sizer shows **no size** on purpose: the old
 `100,000 ÷ entry` alone is in the base currency and over-sized these pairs by ~17 % (EUR) to ~30 % (GBP).
 
-**MT5 check.** Under Contract Value, "MT5 check" takes Tick size and Tick value from MT5
-(Market Watch → right-click → Specification). `CV = Tick value ÷ Tick size`. Within 1 % of the
-current CV the instrument is marked "✓ MT5 verified <date>" (stored locally); otherwise you get the
-difference and a "Use MT5 value" button that sets it as manual override. Expected FTMO values:
-EUR/USD 0.00001 / 1 → 100,000 · US100 0.01 / 0.01 → 1 · ETH/USD 0.01 / 0.01 → 1.
+**MT5 check.** Under Contract Value, "MT5 check" takes what the MT5 app shows under
+Specification: Kontraktgröße (Contract size), Profit-Währung (Profit currency), Volumenschritt
+(Volume step). They are compared with the preset (FX: 100,000 units and the quote currency;
+everything else: contract size = CV in USD). A match marks the instrument "✓ MT5 verified <date>"
+(stored locally); a mismatch is spelled out, and for USD-profit non-FX instruments "Use MT5 value"
+sets the contract size as manual CV override. EUR/USD is verified in the code from a real FTMO MT5
+screenshot (100 000 EUR, profit USD, step 0.01). Expected for US100 and ETH/USD: contract size 1, USD.
 
 **R targets & 2-stop plan.** The sizer result lists price and $ P&L at 1/2/3/5/10R (with the
 rounded size). A 2-stop plan (half out at 0.5R, rest at the SL → total loss 0.75R; size is not

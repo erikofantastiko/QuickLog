@@ -18,7 +18,8 @@ var $ = function(id){ return document.getElementById(id); };
 // (USD is the base, e.g. USD/JPY, USD/CAD), a flagged cross-rate approximation otherwise.
 var PRESETS = {
   ftmo:[
-    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURUSD'},
+    // mt5: verified against Erik's FTMO MT5 Specification (Kontraktgröße 100 000 EUR, Profit USD, step 0.01).
+    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURUSD',mt5:'2026-10-16'},
     {s:'GBP/USD',base:'GBP',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:GBPUSD'},
     {s:'USD/JPY',base:'USD',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:USDJPY'},
     {s:'EUR/JPY',base:'EUR',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:EURJPY'},
@@ -91,7 +92,7 @@ var state = {
   dirManual:false,    // true once the user clicks Long/Short; auto-detect from entry vs SL until then
   fxRates:{},         // cross-pair BASE→USD rates {EUR:{v,src:'kraken'|'manual',at}} — persisted
   fxStatus:{},        // per-base fetch status ('loading'|'error'|'') — session only
-  verified:{},        // MT5 check results {'ftmo|US100 (NDX)':{cv,date}} — persisted
+  verified:{},        // MT5 check results {'ftmo|US100 (NDX)':{cs,ccy,date}} — persisted
   twoStopOpen:false,  // Yolo 2-stop plan in the sizer result — hidden by default
   rTargetsOpen:true,  // R-target table (1/2/3/5/10R) in the sizer result
   chartInterval:'1h', // LWC timeframe ('15m'|'1h'|'4h'|'1d'); maps to Kraken minutes / TD strings
@@ -210,9 +211,10 @@ function syncContractValue(){
   } else if(derives && state.cvManual){
     hintEl.textContent='(manual override — auto-derive off)';
   } else {
-    var v=verifiedFor(p);
-    hintEl.textContent='('+p.hint+(v&&!state.cvManual?' · ✓ MT5 verified '+v.date:'')+')';
+    hintEl.textContent='('+p.hint+')';
   }
+  var v=verifiedFor(p);
+  if(v && !state.cvManual) hintEl.textContent=hintEl.textContent.replace(/\)$/,' · ✓ MT5 verified '+v.date+')');
 }
 
 // Show/fill the BASE→USD rate field for cross pairs; hidden otherwise.
@@ -411,25 +413,46 @@ function onSzOutClick(ev){
   update();
 }
 
-/* ---------- MT5 check (Market Watch → Specification: Tick size / Tick value) ---------- */
+/* ---------- MT5 check (Specification: Kontraktgröße / Profit-Währung / Volumenschritt) ---------- */
 
-// cv per MT5 = Tick value / Tick size (tick value is in account currency). ok within 1 %.
-function mt5CvCheck(tickSizeStr, tickValueStr, cvStr){
-  var ts=parseNum(tickSizeStr), tv=parseNum(tickValueStr), cv=parseNum(cvStr);
-  if(isNaN(ts)||isNaN(tv)||ts<=0||tv<=0) return null;
-  var cvMt5=tv/ts;
-  var diff = (!isNaN(cv)&&cv>0) ? (cv-cvMt5)/cvMt5 : NaN;
-  return {cvMt5:cvMt5, diffPct: diff*100, ok: !isNaN(diff) && Math.abs(diff)<=0.01};
+// Tolerant number parse for values copied from MT5 ("100 000 EUR", "0,01").
+function parseSpecNum(v){
+  var t=String(v).replace(/[^\d.,\-]/g,'').replace(',','.');
+  return t ? parseFloat(t) : NaN;
+}
+
+// What QuickLog assumes for a preset, in MT5's terms: contract size (units per lot),
+// profit currency, volume step. FX lots are FX_LOT units; everything else uses preset.cv
+// (USD-quoted ⇒ cv == contract size).
+function presetSpec(p){
+  var fx=!!(p && p.quote);
+  return { cs: fx ? FX_LOT : parseNum(p.cv), ccy: fx ? p.quote : ACCOUNT_CCY, step: p.step };
+}
+
+// Compare the MT5 Specification fields with the preset. Contract size is required;
+// profit currency and volume step are checked when filled. ok ⇒ every given field matches.
+function mt5SpecCheck(p, csStr, ccyStr, stepStr){
+  var cs=parseSpecNum(csStr);
+  if(!p || isNaN(cs) || cs<=0) return null;
+  var exp=presetSpec(p), issues=[];
+  if(isNaN(exp.cs) || Math.abs(cs-exp.cs)>1e-9*Math.max(1,exp.cs)) issues.push({field:'cs', mt5:cs, ql:exp.cs});
+  var ccy=String(ccyStr||'').trim().toUpperCase();
+  if(ccy && ccy!==exp.ccy) issues.push({field:'ccy', mt5:ccy, ql:exp.ccy});
+  var st=parseSpecNum(stepStr);
+  if(!isNaN(st) && st>0 && Math.abs(st-exp.step)>1e-12) issues.push({field:'step', mt5:st, ql:exp.step});
+  return {cs:cs, ccy:ccy||exp.ccy, step:isNaN(st)?null:st, issues:issues, ok:issues.length===0};
 }
 
 function verifyKey(p){ return $('brk').value+'|'+p.s; }
 
-// Stored MT5 verification for a static preset — valid only while the preset cv still matches.
+// MT5 verification for a preset: checked into the code (preset.mt5 = date, from a real MT5
+// screenshot) or done locally via the MT5 check. A stored check only counts while the preset
+// still has the same contract size + profit currency.
 function verifiedFor(p){
-  if(!p || (p.quote && p.quote!==ACCOUNT_CCY)) return null;
-  var v=state.verified[verifyKey(p)], pc=parseNum(p.cv);
-  if(!v || isNaN(pc) || pc<=0) return null;
-  return Math.abs(v.cv-pc)/pc<=0.01 ? v : null;
+  if(!p) return null;
+  if(p.mt5) return {date:p.mt5};
+  var v=state.verified[verifyKey(p)], exp=presetSpec(p);
+  return (v && v.cs===exp.cs && v.ccy===exp.ccy) ? v : null;
 }
 
 function toggleMt5(){
@@ -439,33 +462,36 @@ function toggleMt5(){
   if(open) renderMt5();
 }
 
+var MT5_LABEL={cs:'Contract size', ccy:'Profit currency', step:'Volume step'};
+
 function renderMt5(){
   var out=$('mt5Out'), p=currentPreset();
   if(!out||!p) return;
-  var c=mt5CvCheck($('mt5TickSize').value,$('mt5TickValue').value,$('cv').value);
-  if(!c){ out.innerHTML='<div class="sz-note">From MT5: Market Watch → right-click '+esc(p.s)+' → Specification.</div>'; return; }
-  var derives=!!(p.quote && p.quote!==ACCOUNT_CCY);
-  var cvTxt=c.cvMt5.toLocaleString('en-US',{maximumFractionDigits:4});
+  var c=mt5SpecCheck(p,$('mt5Cs').value,$('mt5Ccy').value,$('mt5Step').value);
+  if(!c){ out.innerHTML='<div class="sz-note">MT5 → '+esc(p.s)+' → Specification: copy Kontraktgröße (Contract size), Profit-Währung, Volumenschritt.</div>'; return; }
   if(c.ok){
-    if(!derives){
-      state.verified[verifyKey(p)]={cv:c.cvMt5, date:today()};
-      saveState();
-      syncContractValue();
-    }
-    out.innerHTML='<div class="sz-ok">✓ MT5 cv '+cvTxt+' matches'+(derives?' (price-dependent pair — not stored)':' — '+esc(p.s)+' marked verified')+'</div>';
-  } else {
-    out.innerHTML='<div class="sz-warn">MT5 cv '+cvTxt+' ≠ QuickLog cv '+esc($('cv').value||'—')+(isNaN(c.diffPct)?'':' ('+(c.diffPct>0?'+':'')+c.diffPct.toFixed(1)+' %)')
-      +'<br><button class="tf" id="mt5Use" style="margin-top:8px">Use MT5 value</button></div>';
+    var exp=presetSpec(p);
+    state.verified[verifyKey(p)]={cs:exp.cs, ccy:exp.ccy, date:today()};
+    saveState();
+    syncContractValue();
+    out.innerHTML='<div class="sz-ok">✓ Matches MT5 — '+esc(p.s)+' marked verified</div>';
+    return;
   }
+  var lines=c.issues.map(function(i){ return MT5_LABEL[i.field]+': MT5 '+esc(i.mt5)+' ≠ QuickLog '+esc(i.ql); }).join('<br>');
+  // Only a contract-size mismatch on an ACCOUNT_CCY-profit, non-FX instrument maps 1:1 onto cv.
+  var canUse = !p.quote && c.ccy===ACCOUNT_CCY && c.issues.every(function(i){ return i.field==='cs'; });
+  out.innerHTML='<div class="sz-warn">'+lines
+    +(canUse?'<br><button class="tf" id="mt5Use" style="margin-top:8px">Use MT5 value (cv = '+esc(c.cs)+')</button>':'<br>Fix the preset or override the contract value by hand.')
+    +'</div>';
 }
 
 function useMt5Value(){
-  var c=mt5CvCheck($('mt5TickSize').value,$('mt5TickValue').value,$('cv').value);
+  var c=mt5SpecCheck(currentPreset(),$('mt5Cs').value,$('mt5Ccy').value,$('mt5Step').value);
   if(!c) return;
-  $('cv').value=String(+c.cvMt5.toFixed(6));
+  $('cv').value=String(c.cs);
   state.cvManual=true;
   update();
-  renderMt5();
+  var o=$('mt5Out'); if(o) o.innerHTML='<div class="sz-ok">cv set to MT5 contract size '+esc(c.cs)+' (manual override)</div>';
 }
 
 function getAccount(){
@@ -765,7 +791,7 @@ function onInstrumentChange(){
   state.cvManual=false;
   var p=currentPreset();
   // MT5 tick inputs belong to the previous instrument — never let them verify the new one.
-  ['mt5TickSize','mt5TickValue'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
+  ['mt5Cs','mt5Ccy','mt5Step'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
   var mo=$('mt5Out'); if(mo) mo.innerHTML='';
   fetchFxRate(crossBase(p));
   // Static cv only for non-derived pairs; entry-derived ones are filled by syncContractValue().
@@ -1323,8 +1349,9 @@ function bind(){
   on('fxRate','input',onFxRateInput);
   on('szOut','click',onSzOutClick);
   on('mt5Toggle','click',toggleMt5);
-  on('mt5TickSize','input',renderMt5);
-  on('mt5TickValue','input',renderMt5);
+  on('mt5Cs','input',renderMt5);
+  on('mt5Ccy','input',function(){ this.value=this.value.toUpperCase(); renderMt5(); });
+  on('mt5Step','input',renderMt5);
   on('mt5Out','click',function(e){ if(e.target && e.target.id==='mt5Use') useMt5Value(); });
   on('szEntry','input',update);
   on('szSL','input',update);
