@@ -77,6 +77,20 @@
   <div class="fi" id="cvWrap">
     <label for="cv">Contract Value <span id="cvHint" style="text-transform:none;letter-spacing:0;color:var(--tx3)">(per 1.0 price move, per lot)</span></label>
     <input type="text" inputmode="decimal" id="cv" placeholder="1.0">
+    <div style="margin-top:8px"><button class="tf" id="mt5Toggle" type="button">MT5 check ▾</button></div>
+    <div id="mt5Wrap" class="mt5" style="display:none">
+      <div class="r3">
+        <div><label for="mt5Cs">Contract size</label><input type="text" id="mt5Cs" inputmode="decimal" placeholder="100000"></div>
+        <div><label for="mt5Ccy">Profit ccy</label><input type="text" id="mt5Ccy" maxlength="3" placeholder="USD"></div>
+        <div><label for="mt5Step">Vol. step</label><input type="text" id="mt5Step" inputmode="decimal" placeholder="0.01"></div>
+      </div>
+      <div id="mt5Out"></div>
+    </div>
+  </div>
+
+  <div class="fi" id="fxRateWrap" style="display:none">
+    <label for="fxRate"><span id="fxRateLabel">EUR→USD rate</span> <span id="fxRateHint" style="text-transform:none;letter-spacing:0;color:var(--tx3)"></span></label>
+    <input type="text" id="fxRate" inputmode="decimal" placeholder="1.1700" style="font-family:var(--mn)">
   </div>
 
   <div class="sp"></div>

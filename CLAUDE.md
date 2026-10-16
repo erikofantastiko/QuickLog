@@ -37,19 +37,23 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Trade Log (`shot`,`exi`,`rskUsd`,`pnl`,`res`,`mgmt`,`emo`,`fbk`). Leer ⇒ leere Zelle (offene Trades).
 - **Sizing-Formel:** `vol = riskAmt / (dist × cv)`, mit `riskAmt = account × risk%`, `dist = |entry − sl|`.
 - **cv ist kontowährungs-bewusst (`ACCOUNT_CCY='USD'`).** `cv` = Wert einer 1.0-Preisbewegung pro
-  Lot in Kontowährung. Regel in `contractValueFor`: `quote===ACCOUNT_CCY` → cv statisch (`preset.cv`,
-  exakt); sonst `cv = FX_LOT / entry` — **exakt** wenn `base===ACCOUNT_CCY` (USD ist Basis: USD/JPY,
-  USD/CAD), **flagged Cross-Approx** wenn USD weder Basis noch Quote (EUR/JPY, GBP/JPY, EUR/GBP →
-  Hint „≈ … verify in MT5 / override"). Feld bleibt editierbar = manueller Override. Ohne Entry →
-  kein Ergebnis (kein Mis-Sizing). FX-Presets tragen dafür `base`/`quote`; Non-FX (USD-quotiert)
-  bleibt statisch. Bei Kontowechsel nur `ACCOUNT_CCY` ändern.
+  Lot in Kontowährung. Regel in `contractValueFor(preset, entry, baseRate)`: `quote===ACCOUNT_CCY` →
+  cv statisch (`preset.cv`); `base===ACCOUNT_CCY` → `cv = FX_LOT / entry` (USD/JPY, USD/CAD);
+  **Cross** (USD weder Basis noch Quote: EUR/JPY, GBP/JPY, EUR/GBP) → `cv = FX_LOT / entry × BASE→USD`,
+  exakt. Kurs aus Kraken Public Ticker (`fetchFxRate`, keyless) oder manuell (`#fxRate`), pro Basis in
+  `state.fxRates` (im `quicklog`-Blob). **Ohne Kurs → NaN → kein Ergebnis**, nie die alte Näherung
+  `FX_LOT/entry` (die ist in Basiswährung, +17 % bis +30 % Überrisiko). Ohne Entry → kein Ergebnis.
+  cv-Feld trägt volle Präzision (8 dp), sonst floort z. B. 666.67 statt 666.666… 1.50 auf 1.49.
+  Feld bleibt editierbar = manueller Override. Bei Kontowechsel nur `ACCOUNT_CCY` ändern.
 - **Contract Sizes verifiziert (EU/classic FTMO, Stand 2026-06):** FX 100.000 Einheiten/Lot, Indizes
-  .cash Contract size 1 → $1/Punkt/Lot, XAU 100 oz, XAG 5000 oz, BTC/ETH 1 Coin — decken sich mit
-  FTMOs EU-Specs. Restunschärfe sind nur die Cross-Rate-Paare oben (→ Override). Trotzdem im
+  .cash Contract size 1 → $1/Punkt/Lot, XAU 100 oz, XAG 5000 oz, BTC 1 Coin — decken sich mit
+  FTMOs EU-Specs. Cross-Paare sind seit dem Kraken-Kurs exakt. Trotzdem im
   Zweifel in MT5 prüfen (Market Watch → Specification); jedes Instrument hat manuellen Override.
-  **Offen (2026-10):** Websuche fand ein FTMO-Trading-Update (24.07.2025), laut dem ETHUSD auf
-  Contract size 10 umgestellt wurde. Nicht verifiziert (nur Such-Zusammenfassung) → Preset unverändert
-  (cv 1), bis Erik es in MT5 prüft. Bei cv 10 wäre die ETH-Größe aktuell 10× zu groß.
+- **ETH/USD = Kontraktgröße 10 (1 Lot = 10 ETH), nicht 1.** Per MT5-Screenshot 2026-10-16 bestätigt;
+  die Online-Recherche (2026-06, „1 Coin“) war falsch, alte Sizes waren 10× zu groß. **MT5 schlägt
+  jede Recherche.** BTC/USD = 1 per MT5-Screenshot bestätigt. XAU 100 / XAG 5000 per Screenshot bestätigt. US500 = 1 per Screenshot bestätigt. Nur die FX-Paare außer EUR/USD sind noch NICHT gegen MT5 geprüft.
+- **Max-Volumen:** Presets mit `max` (EUR/USD 50, US100 1000, US500 1000, ETH/USD 5, aus MT5) warnen im Sizer,
+  wenn die Lots darüber liegen (MT5 lehnt die Order ab).
 - **Broker-Modelle:** FTMO = MT5 CFD, Sizing in Lots. Breakout = Crypto-Perps, Sizing in Coins
   (`coins = Risk$ / |Entry − SL|`, cv = 1), Kraken-Feeds.
 - **Zahlen nie still falsch lesen.** Alle Zahlenfelder laufen über `numOf(id)` → `parseNum(v, bandFor(id))`.
@@ -69,20 +73,34 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   `quicklog`-Blob. `#tdKey` ist `type=password` und steht NICHT in `PERSISTED_FIELDS`. Die
   veröffentlichte Seite ist keyless.
 
+- **Sizer-Extras (nur Anzeige):** R-Ziele 1/2/3/5/10R (Default offen) und Yolo-2-Stop-Plan (½ bei
+  0.5R raus, Rest am SL, Größe nicht hochskaliert ⇒ 0.75R; **Default ausgeblendet**). MT5-Abgleich:
+  Kontraktgröße / Profit-Währung / Volumenschritt (das zeigt die MT5-iOS-App; Tick size/value nicht)
+  gegen `presetSpec` (FX: `FX_LOT` + quote, sonst `preset.cv` + USD). Treffer ⇒ `state.verified[brk|inst]`,
+  gilt nur solange Contract size + Währung des Presets gleich bleiben. `preset.mt5` = im Code
+  verifiziert (2026-10-16: EUR/USD, US100, ETH/USD per Screenshot).
+  Sheet-Export, `SHEET_COLUMNS` und Karten bleiben davon unberührt.
+
 ## Testen
 
 - Schnelle Syntaxprüfung: `node --check app.js` (die Logik liegt jetzt direkt in `app.js`, keine
   `<script>`-Extraktion mehr nötig).
-- Geld-Mathematik: `node test/sizing.test.mjs` — 196 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
+- Geld-Mathematik: `node test/sizing.test.mjs` — 278 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
   Mapping A–W, leere Formelspalten M/N/O/P und Live↔Backtest-Ausrichtung, `contractValueFor`
   statisch/derive/cross inkl. USD/CAD & EUR/GBP, `FX_LOT` & `ACCOUNT_CCY` gepinnt, Sizing EUR/USD
   0.8333 & JPY 0.375, `roundVol`-Edges, `parseNum` inkl. Bänder, Log-R:R-Seite, Custom-Risk leer,
   Auto-Richtung, `sizeChecks`, `riskForVol`, `outsideBand`, `sheetRisk`, `TRADE_FIELDS`, `sendToLog`
   end-to-end mit persistentem DOM-Stub, echte `copyForSheet`-Zeile live/backtest inkl. Zelle-für-Zelle-Vergleich A–W, band+maxLev auf
-  jedem Preset außer Custom). Liest die
+  jedem Preset außer Custom; dazu cross exakt EUR/JPY, GBP/JPY, EUR/GBP inkl. „ohne Kurs → NaN“, ETH cv 10,
+  `rTargets`, `twoStopPlan` inkl. Step-Split, `mt5SpecCheck`). Liest die
   Formeln/Werte direkt aus dem Quelltext (kein hartkodiertes Replikat) → regrediert bei gebrochener Mathematik.
   Quelle ist seit dem PWA-Split `app.js` (nicht mehr `index.html`). Bei `const`/Arrow bricht die
   Extraktion laut (Testfehler, nie still grün).
+- Browser: `node test/ui.test.mjs` — 63 Checks, Playwright + Chromium headless (global `playwright`
+  nötig, fehlt es ⇒ Exit 1). Eigener Static-Server, Kraken per `page.route` gemockt, alles andere
+  Externe geblockt. Prüft Cross-Sizing, Kraken-Ausfall ⇒ kein Ergebnis, manuellen Kurs + Reload,
+  R-Ziele, 2-Stop (Default aus, Toggle, Persistenz), MT5-Abgleich und „Copy for Sheet“
+  byte-identisch zur Baseline von vor der Änderung.
 - Voller Test: lokal servieren (`npx serve` / `python -m http.server`) und im Browser durchklicken.
   Persistenz: ausfüllen → reload → Felder bleiben.
 

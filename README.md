@@ -74,13 +74,15 @@ official FTMO spec sheet. Formula used: `CV = Risk$ / (Lot × SL-distance)`.
 
 | Instrument | CV (per 1.0 price move, per lot) | Source |
 |---|---|---|
-| EUR/USD, GBP/USD, EUR/GBP, AUD/USD, USD/CAD | 100,000 | standard lot |
-| USD/JPY (+ JPY crosses) | 100,000 ÷ entry price (auto-derived) | standard lot, exact |
-| US100 (NDX) | 1 | logged FTMO trades + $1/point confirmation |
-| US500 (SPX) | 1 | FTMO CFD logic, analogous to US100 |
-| XAU/USD | 100 | 1 lot = 100 oz |
-| XAG/USD | 5000 | 1 lot = 5000 oz |
-| BTC/USD, ETH/USD | 1 | logged FTMO trades (≈1 unit/lot) — **ETH: check**, an FTMO trading update (24 Jul 2025) reportedly moved ETHUSD to contract size 10 |
+| EUR/USD, GBP/USD, AUD/USD | 100,000 | standard lot |
+| USD/JPY, USD/CAD | 100,000 ÷ entry price (auto-derived) | standard lot, exact |
+| EUR/JPY, GBP/JPY, EUR/GBP (crosses) | 100,000 ÷ entry × BASE→USD rate | standard lot, exact |
+| US100 (NDX) | 1 | FTMO MT5: US100.cash contract size 1, profit USD |
+| US500 (SPX) | 1 | FTMO MT5: US500.cash contract size 1, profit USD |
+| XAU/USD | 100 | FTMO MT5: contract size 100 oz (checked 2026-10-16) |
+| XAG/USD | 5000 | FTMO MT5: contract size 5 000 oz (checked 2026-10-16) |
+| BTC/USD | 1 | FTMO MT5: contract size 1 (checked 2026-10-16) |
+| ETH/USD | 10 | FTMO MT5: contract size 10 (1 lot = 10 ETH), max 5 lots |
 
 **Verify against MT5 before trusting blindly.** FTMO does not publish a central CV table; the exact
 value is in the platform: Market Watch (Ctrl+M) → right-click instrument → Specification. If a value
@@ -91,6 +93,25 @@ as `100,000 ÷ entry price` whenever an entry is filled (P&L per 1.0 move is `10
 $100,000). The Contract Value field shows the derived number and stays editable — typing into it turns
 the auto-derive off (manual override). If a JPY pair is selected without an entry, the result waits
 rather than sizing off a stale value.
+
+**Cross pairs without USD** (EUR/JPY, GBP/JPY, EUR/GBP) need the base currency's USD rate:
+`CV = 100,000 ÷ entry × EURUSD` (or GBPUSD for GBP/JPY). The rate is fetched keyless from Kraken's
+public ticker and shown in the "EUR→USD rate" field; you can type your own (pinned as manual, clear
+the field to auto-fetch again). Without a rate the sizer shows **no size** on purpose: the old
+`100,000 ÷ entry` alone is in the base currency and over-sized these pairs by ~17 % (EUR) to ~30 % (GBP).
+
+**MT5 check.** Under Contract Value, "MT5 check" takes what the MT5 app shows under
+Specification: Kontraktgröße (Contract size), Profit-Währung (Profit currency), Volumenschritt
+(Volume step). They are compared with the preset (FX: 100,000 units and the quote currency;
+everything else: contract size = CV in USD). A match marks the instrument "✓ MT5 verified <date>"
+(stored locally); a mismatch is spelled out, and for USD-profit non-FX instruments "Use MT5 value"
+sets the contract size as manual CV override. EUR/USD, US100 and ETH/USD are marked verified in the
+code (FTMO MT5, 2026-10-16). Note: MT5 shows Tick size/Tick value as 0 for index CFDs (US100.cash);
+contract size is the field that counts.
+
+**R targets & 2-stop plan.** The sizer result lists price and $ P&L at 1/2/3/5/10R (with the
+rounded size). A 2-stop plan (half out at 0.5R, rest at the SL → total loss 0.75R; size is not
+scaled up) can be shown with "2-Stop plan"; it is hidden by default. Both are display only.
 
 **Breakout** is crypto-only (since Feb 2024), perpetuals, Kraken-backed feeds. Sizing is in coins:
 `coins = Risk$ / |Entry − SL|` (CV = 1). No FX/indices/metals on Breakout.

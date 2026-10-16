@@ -2,6 +2,21 @@
 
 Version = `APP_VERSION` in `app.js` (also shown in the footer and used as the service-worker cache name).
 
+## 1.1.0 — 2026-10-16
+
+### Fixed
+- **ETH/USD sized 10× too large.** FTMO MT5 shows contract size 10 (1 lot = 10 ETH); the preset had 1.
+- **Cross pairs over-sized 17–30 %.** EUR/JPY, GBP/JPY, EUR/GBP now use `100,000 ÷ entry × BASE→USD`
+  (Kraken public ticker, or typed by hand). Without a rate the sizer shows no size.
+- **USD/JPY 1.49 instead of 1.50 lots.** Entry-derived contract value keeps full precision.
+
+### Added
+- Presets checked against FTMO MT5 screenshots (EUR/USD, US100, US500, BTC/USD, ETH/USD, XAU/USD,
+  XAG/USD) show "✓ MT5 verified"; "MT5 check" compares contract size / profit currency / volume step.
+- Warning above the MT5 max volume per order (EUR/USD 50, US100/US500 1000, ETH/USD 5).
+- R targets (1/2/3/5/10R) and a Yolo-style 2-stop plan (hidden by default) under the sizer result.
+- Browser test suite `test/ui.test.mjs` (Playwright, local only).
+
 ## 1.0.0 — 2026-10
 
 First tagged release. Focus: the numbers you size and journal with can't be silently wrong.

@@ -123,7 +123,16 @@ const pieces = [
   extractFn('sendToLog'),
   // The REAL sheet export, so a regression at the call site (not just in a helper) fails.
   extractFn('today'),
-  extractFn('copyForSheet')
+  extractFn('copyForSheet'),
+  // Cross-rate + Yolo extras + MT5 check (pure / $-stub-backed).
+  extractFn('crossBase'),
+  extractVarLiteral('R_MULTIPLES', '[', ']'),
+  extractFn('priceDecimals'),
+  extractFn('rTargets'),
+  extractFn('twoStopPlan'),
+  extractFn('parseSpecNum'),
+  extractFn('presetSpec'),
+  extractFn('mt5SpecCheck')
 ];
 
 // Mutable field map standing in for the DOM inputs/selects.
@@ -151,7 +160,8 @@ const factory = new Function('$', 'fields', 'state', 'window', 'calls', `
   function toast(m){ calls.push('toast:' + m); }
   function copyText(t){ calls.push({ copied: t }); }
   ${pieces.join('\n')}
-  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, sizeChecks, riskForVol, logRR, getLogRisk, maybeAutoDirection, TRADE_FIELDS, TRANSFER_FIELDS, sheetRisk, outsideBand, sendToLog, copyForSheet };
+return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, presetForAsset, bandFor, numOf, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize, sizeChecks, riskForVol, logRR, getLogRisk, maybeAutoDirection, TRADE_FIELDS, TRANSFER_FIELDS, sheetRisk, outsideBand, sendToLog, copyForSheet,
+           crossBase, R_MULTIPLES, priceDecimals, rTargets, twoStopPlan, parseSpecNum, presetSpec, mt5SpecCheck };
 `);
 const M = factory($, fields, state, win, calls);
 
@@ -162,6 +172,10 @@ const EURUSD = presetByName('EUR/USD');
 const USDJPY = presetByName('USD/JPY');
 const USDCAD = presetByName('USD/CAD');
 const EURGBP = presetByName('EUR/GBP');
+const EURJPY = presetByName('EUR/JPY');
+const GBPJPY = presetByName('GBP/JPY');
+const US100  = presetByName('US100 (NDX)');
+const ETHUSD = presetByName('ETH/USD');
 
 /* ---------- tiny assertion harness ---------- */
 
@@ -230,8 +244,32 @@ approx(M.contractValueFor(USDJPY, '150'), 100000 / 150, 1e-6, 'contractValueFor(
 eq(M.contractValueFor(EURUSD, '1.085'), 100000, 'contractValueFor(EUR/USD,"1.085") == 100000 (quote=USD → static)');
 // USD/CAD: USD is the base ⇒ exact entry-derive (the fix; previously mis-treated as static 100000).
 approx(M.contractValueFor(USDCAD, '1.37'), 100000 / 1.37, 1e-6, 'contractValueFor(USD/CAD,"1.37") == 100000/1.37');
-// EUR/GBP: USD is neither base nor quote ⇒ best-effort entry-derive (flagged approx in the UI).
-approx(M.contractValueFor(EURGBP, '0.85'), 100000 / 0.85, 1e-6, 'contractValueFor(EUR/GBP,"0.85") == 100000/0.85 (cross approx)');
+// 2b. True crosses (USD neither base nor quote): cv = FX_LOT/entry × BASE→USD rate. EXACT:
+//     quote→USD = baseUSD / price. Without the rate there is NO cv (NaN ⇒ no size), because
+//     the old FX_LOT/entry alone is in BASE currency and over-sized by the baseUSD factor.
+ok(!!EURJPY && !!GBPJPY, 'EUR/JPY and GBP/JPY presets must exist in PRESETS.ftmo');
+approx(M.contractValueFor(EURJPY, '170', '1.17'), 100000 / 170 * 1.17, 1e-6, 'EUR/JPY cv == 100000/170 × EURUSD 1.17');
+approx(M.contractValueFor(GBPJPY, '195', '1.30'), 100000 / 195 * 1.30, 1e-6, 'GBP/JPY cv == 100000/195 × GBPUSD 1.30');
+approx(M.contractValueFor(EURGBP, '0.85', '1.17'), 100000 / 0.85 * 1.17, 1e-6, 'EUR/GBP cv == 100000/0.85 × EURUSD 1.17');
+//     Cross-check the exact formula against an independent route: EUR/GBP pip value in USD
+//     = 100000 × GBPUSD, with GBPUSD = EURUSD / EURGBP.
+approx(M.contractValueFor(EURGBP, '0.85', '1.17'), 100000 * (1.17 / 0.85), 1e-6, 'EUR/GBP cv == 100000 × GBPUSD (independent route)');
+for (const [p, n] of [[EURJPY, 'EUR/JPY'], [GBPJPY, 'GBP/JPY'], [EURGBP, 'EUR/GBP']]) {
+  ok(Number.isNaN(M.contractValueFor(p, '170')), `${n} without base rate ⇒ NaN (no size instead of over-size)`);
+  ok(Number.isNaN(M.contractValueFor(p, '170', '')), `${n} with empty base rate ⇒ NaN`);
+  ok(Number.isNaN(M.contractValueFor(p, '170', '0')), `${n} with zero base rate ⇒ NaN`);
+  ok(Number.isNaN(M.contractValueFor(p, '', '1.17')), `${n} without entry ⇒ NaN`);
+}
+//     Comma decimal accepted for the rate (mobile keyboards).
+approx(M.contractValueFor(GBPJPY, '195', '1,30'), 100000 / 195 * 1.30, 1e-6, 'GBP/JPY rate "1,30" parsed as 1.30');
+//     The rate must NOT leak into non-cross pairs.
+approx(M.contractValueFor(USDJPY, '150', '1.17'), 100000 / 150, 1e-6, 'USD/JPY ignores a base rate (USD is base)');
+eq(M.contractValueFor(EURUSD, '1.085', '1.17'), 100000, 'EUR/USD ignores a base rate (quote=USD → static)');
+//     crossBase classifies exactly the three crosses.
+eq(M.crossBase(EURJPY), 'EUR', 'crossBase(EUR/JPY) == EUR');
+eq(M.crossBase(GBPJPY), 'GBP', 'crossBase(GBP/JPY) == GBP');
+eq(M.crossBase(EURGBP), 'EUR', 'crossBase(EUR/GBP) == EUR');
+for (const p of [EURUSD, USDJPY, USDCAD, US100, ETHUSD]) eq(M.crossBase(p), '', `crossBase(${p.s}) == '' (not a cross)`);
 
 // 3. Sizing of known trades via the REAL calcSize (account 100000, risk 0.25 => riskAmt 250).
 //    EUR/USD 1.08500 -> 1.08200, cv 100000 => vol ~= 0.8333.
@@ -503,6 +541,101 @@ eq(JSON.stringify(row.slice(0, 1).concat(row.slice(2))), JSON.stringify([
   '498.40', '1395.50', '', '', '', '', 'Short', 'NY', 'Win', 'EBP H4 – sweep + FVG', 'BE at 1R', 'calm', 'good entry'
 ]), 'copyForSheet full live row A..W (B excluded) matches the documented mapping cell by cell');
 state.direction = 'Long';
+
+// 20. Cross sizing end to end via the REAL calcSize (account 100000, 1 % ⇒ riskAmt 1000).
+//    GBP/JPY 195.00 → 194.00, GBPUSD 1.30 ⇒ cv 666.67 ⇒ 1.50 lots (old approx gave 1.95).
+setFields({ brk: 'ftmo', inst: 'GBP/JPY', accPreset: '100000', szRisk: '1.00',
+  szEntry: '195.00', szSL: '194.00', szTP: '', cv: String(M.contractValueFor(GBPJPY, '195.00', '1.30')) });
+r = M.calcSize();
+approx(r.vol, 1.5, 1e-9, 'GBP/JPY 195→194, GBPUSD 1.30, 1 % of 100k ⇒ 1.50 lots');
+approx(M.roundVol(r.vol), 1.5, 1e-9, 'GBP/JPY rounded ⇒ 1.50 lots');
+//    EUR/JPY 170.00 → 169.00, EURUSD 1.17 ⇒ cv 688.24 ⇒ 1.453 ⇒ 1.45 lots.
+setFields({ brk: 'ftmo', inst: 'EUR/JPY', accPreset: '100000', szRisk: '1.00',
+  szEntry: '170.00', szSL: '169.00', szTP: '', cv: String(M.contractValueFor(EURJPY, '170.00', '1.17')) });
+r = M.calcSize();
+approx(M.roundVol(r.vol), 1.45, 1e-9, 'EUR/JPY 170→169, EURUSD 1.17, 1 % of 100k ⇒ 1.45 lots');
+//    Risk actually taken with that size, priced in USD, never exceeds the 1000 target.
+ok(M.roundVol(r.vol) * 1 * M.contractValueFor(EURJPY, '170.00', '1.17') <= 1000 + 1e-9, 'EUR/JPY rounded risk ≤ $1000');
+
+// 21. R targets — price ± m×dist in trade direction, P&L = vol×dist×cv×m.
+let t = M.rTargets(1.0850, 1.0830, 5, 100000);
+eq(t.map((x) => x.m).join(','), '1,2,3,5,10', 'R targets are 1/2/3/5/10R');
+approx(t[0].price, 1.0870, 1e-9, 'Long 1R target price 1.0870');
+approx(t[4].price, 1.1050, 1e-9, 'Long 10R target price 1.1050');
+approx(t[0].gain, 1000, 1e-6, 'Long 1R P&L $1000 at 5 lots');
+approx(t[3].gain, 5000, 1e-6, 'Long 5R P&L $5000');
+t = M.rTargets(195.00, 196.00, 1.5, 100000 / 195 * 1.30);
+approx(t[1].price, 193.00, 1e-9, 'Short 2R target price 193.00 (below entry)');
+approx(t[0].gain, 1000, 1e-6, 'Short GBP/JPY 1R P&L $1000 at 1.50 lots');
+t = M.rTargets(10, 15, 1, 1);
+eq(t[1].price, null, 'Short 2R target at/below zero ⇒ null');
+
+// 22. 2-stop plan (Yolo) — half out at 0.5R, rest at SL; size not scaled ⇒ 0.75R total.
+setFields({ brk: 'ftmo', inst: 'EUR/USD' });
+let ts = M.twoStopPlan(1.0850, 1.0830, 5, 100000);
+approx(ts.s1, 1.0840, 1e-9, '2-stop: stop 1 at 0.5R (1.0840) for a long');
+approx(ts.v1, 2.5, 1e-9, '2-stop: stop 1 takes 2.50 of 5.00 lots');
+approx(ts.v2, 2.5, 1e-9, '2-stop: stop 2 carries 2.50 lots');
+approx(ts.loss1, 250, 1e-6, '2-stop: −$250 at stop 1');
+approx(ts.loss2, 500, 1e-6, '2-stop: −$500 at stop 2');
+approx(ts.total, 750, 1e-6, '2-stop: total −$750');
+approx(ts.totalR, 0.75, 1e-9, '2-stop: total = 0.75R');
+ts = M.twoStopPlan(195.00, 196.00, 0.05, 1);
+approx(ts.s1, 195.50, 1e-9, '2-stop: stop 1 above entry for a short');
+approx(ts.v1, 0.02, 1e-9, '2-stop: odd 0.05 lots ⇒ stop 1 floors to 0.02');
+approx(ts.v2, 0.03, 1e-9, '2-stop: odd 0.05 lots ⇒ stop 2 carries 0.03');
+approx(ts.v1 + ts.v2, 0.05, 1e-9, '2-stop: split sums back to the full size');
+ts = M.twoStopPlan(1.0850, 1.0830, 0.01, 100000);
+eq(ts.v1, 0, '2-stop: single step cannot be split (stop 1 size 0)');
+
+// 23. priceDecimals — follows the typed entry, clamped 2..6.
+eq(M.priceDecimals('1.08500'), 5, 'priceDecimals("1.08500") == 5');
+eq(M.priceDecimals('195'), 2, 'priceDecimals("195") == 2 (min)');
+eq(M.priceDecimals('0,1234567'), 6, 'priceDecimals("0,1234567") == 6 (max, comma)');
+
+// 24. MT5 check — compares MT5 Specification (Kontraktgröße / Profit-Währung / Volumenschritt)
+//     with the preset. EUR/USD values are Erik's real FTMO MT5 screenshot (2026-10-16).
+eq(M.parseSpecNum('100 000 EUR'), 100000, 'parseSpecNum("100 000 EUR") == 100000 (MT5 copy)');
+eq(M.parseSpecNum('0,01'), 0.01, 'parseSpecNum("0,01") == 0.01');
+let mc = M.mt5SpecCheck(EURUSD, '100 000 EUR', 'USD', '0.01');
+ok(mc && mc.ok, 'EUR/USD MT5 spec (100 000 EUR, USD, 0.01) matches preset');
+for (const p of [EURUSD, US100, ETHUSD]) eq(p.mt5, '2026-10-16', `${p.s} carries the MT5-verified date in the preset`);
+//     US100.cash real spec (screenshot): Kontraktgröße 1, Profit-Währung USD, Volumenschritt 0.01.
+ok(M.mt5SpecCheck(US100, '1', 'USD', '0.01').ok, 'US100 real MT5 spec matches preset');
+mc = M.mt5SpecCheck(USDJPY, '100000', 'JPY', '0.01');
+ok(mc && mc.ok, 'USD/JPY spec (100000, JPY) matches (FX lot, quote currency)');
+mc = M.mt5SpecCheck(USDJPY, '100000', 'USD', '');
+ok(mc && !mc.ok && mc.issues[0].field === 'ccy', 'USD/JPY with profit USD ⇒ currency mismatch');
+mc = M.mt5SpecCheck(US100, '1', 'USD', '0.01');
+ok(mc && mc.ok, 'US100 contract size 1, USD ⇒ matches cv 1');
+mc = M.mt5SpecCheck(US100, '10', 'USD', '');
+ok(mc && !mc.ok && mc.issues.length === 1 && mc.issues[0].mt5 === 10, 'US100 contract size 10 ⇒ size mismatch');
+//     ETH/USD real spec (screenshot): Kontraktgröße 10 — the old preset cv 1 was 10× off.
+const BTCUSD = presetByName('BTC/USD');
+const XAUUSD = presetByName('XAU/USD'), XAGUSD = presetByName('XAG/USD');
+const US500 = presetByName('US500 (SPX)');
+ok(M.mt5SpecCheck(US500, '1', 'USD', '0.01').ok && US500.mt5 === '2026-10-16' && US500.max === 1000, 'US500 MT5 spec (1, USD, 0.01, max 1000) matches + verified');
+ok(M.mt5SpecCheck(XAUUSD, '100', 'USD', '').ok && XAUUSD.mt5 === '2026-10-16', 'XAU/USD MT5 spec (100, USD) matches + verified');
+ok(M.mt5SpecCheck(XAGUSD, '5 000', 'USD', '').ok && XAGUSD.mt5 === '2026-10-16', 'XAG/USD MT5 spec (5 000, USD) matches + verified');
+eq(BTCUSD.cv, 1, 'BTC/USD cv == 1 (FTMO contract size 1, MT5 screenshot)');
+eq(BTCUSD.mt5, '2026-10-16', 'BTC/USD carries the MT5-verified date');
+ok(M.mt5SpecCheck(BTCUSD, '1', 'USD', '0.01').ok, 'BTC/USD MT5 spec (1, USD) matches preset');
+eq(ETHUSD.cv, 10, 'ETH/USD cv == 10 (FTMO contract size 10 ETH per lot)');
+ok(M.mt5SpecCheck(ETHUSD, '10', 'USD', '0.01').ok, 'ETH/USD real MT5 spec (10, USD, 0.01) matches preset');
+mc = M.mt5SpecCheck(ETHUSD, '1', '', '');
+ok(mc && !mc.ok && mc.issues[0].field === 'cs', 'ETH/USD contract size 1 ⇒ mismatch (the old wrong value)');
+//     Sizing: 1 % of 100k, ETH 2450 → 2400 ⇒ 1000 / (50 × 10) = 2.00 lots (was 20 with cv 1).
+setFields({ brk: 'ftmo', inst: 'ETH/USD', accPreset: '100000', szRisk: '1.00',
+  szEntry: '2450', szSL: '2400', szTP: '', cv: String(ETHUSD.cv) });
+approx(M.roundVol(M.calcSize().vol), 2, 1e-9, 'ETH/USD 2450→2400, 1 % ⇒ 2.00 lots');
+eq(ETHUSD.max, 5, 'ETH/USD max volume 5 lots (MT5)');
+eq(EURUSD.max, 50, 'EUR/USD max volume 50 lots (MT5)');
+eq(US100.max, 1000, 'US100 max volume 1000 lots (MT5)');
+mc = M.mt5SpecCheck(EURUSD, '100000', 'USD', '0.1');
+ok(mc && !mc.ok && mc.issues[0].field === 'step', 'volume step 0.1 vs preset 0.01 ⇒ step mismatch');
+eq(M.mt5SpecCheck(EURUSD, '', 'USD', '0.01'), null, 'missing contract size ⇒ null');
+eq(M.mt5SpecCheck(EURUSD, '0', 'USD', ''), null, 'zero contract size ⇒ null');
+eq(M.presetSpec(EURGBP).ccy, 'GBP', 'presetSpec(EUR/GBP) profit currency GBP');
 
 /* =================== SUMMARY =================== */
 
