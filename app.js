@@ -30,8 +30,10 @@ var PRESETS = {
     // mt5: FTMO MT5 screenshot 2026-10-16 — US100.cash Kontraktgröße 1, Profit USD, step 0.01, commission 0.
     {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,max:1000,hint:'$1 / point / lot',tv:'OANDA:NAS100USD',mt5:'2026-10-16'},
     {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:SPX500USD'},
-    {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD'},
-    {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',tv:'OANDA:XAGUSD'},
+    // mt5: FTMO MT5 screenshot 2026-10-16 — XAUUSD Kontraktgröße 100, Profit USD.
+    {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD',mt5:'2026-10-16'},
+    // mt5: FTMO MT5 screenshot 2026-10-16 — XAGUSD Kontraktgröße 5 000, Profit USD.
+    {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',tv:'OANDA:XAGUSD',mt5:'2026-10-16'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — Kontraktgröße 1 (1 lot = 1 BTC), Profit USD. Max volume not captured.
     {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'1 lot = 1 BTC → $1 / $1 move',tv:'BITSTAMP:BTCUSD',mt5:'2026-10-16'},
     // mt5: checked by Erik in MT5 2026-10-16 (no screenshot) — contract size 1, profit USD.

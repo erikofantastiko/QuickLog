@@ -216,17 +216,17 @@ const SHEET_BASELINE = '\t16/10/2026 10:30\tEURUSD\t\t1.08500\t\t1.08300\t1.0890
   await page.selectOption('#inst', 'US100 (NDX)');
   ok((await page.textContent('#cvHint')).includes('MT5 verified 2026-10-16'), 'US100 verified from the preset');
 
-  // Local check path on an instrument not verified in code (XAG/USD, 5000 oz).
-  await page.selectOption('#inst', 'XAG/USD');
-  await page.fill('#szEntry', '30.000'); await page.fill('#szSL', '29.800');
-  ok(!(await page.textContent('#cvHint')).includes('MT5 verified'), 'XAG not verified before the check');
+  // Local check path on an instrument not verified in code (US500, contract size 1).
+  await page.selectOption('#inst', 'US500 (SPX)');
+  await page.fill('#szEntry', '5800'); await page.fill('#szSL', '5780');
+  ok(!(await page.textContent('#cvHint')).includes('MT5 verified'), 'US500 not verified before the check');
   ok(!(await page.isVisible('#mt5Wrap')), 'MT5 check collapsed by default');
   await page.click('#mt5Toggle');
-  await page.fill('#mt5Cs', '5 000');
+  await page.fill('#mt5Cs', '1');
   await page.fill('#mt5Ccy', 'usd');
   eq(await page.inputValue('#mt5Ccy'), 'USD', 'profit currency is upper-cased');
-  ok((await page.textContent('#mt5Out')).includes('Matches MT5'), 'XAG contract size 5 000 / USD ⇒ matches');
-  ok((await page.textContent('#cvHint')).includes('MT5 verified'), 'XAG hint shows MT5 verified');
+  ok((await page.textContent('#mt5Out')).includes('Matches MT5'), 'US500 contract size 1 / USD ⇒ matches');
+  ok((await page.textContent('#cvHint')).includes('MT5 verified'), 'US500 hint shows MT5 verified');
   await page.reload();
   ok((await page.textContent('#cvHint')).includes('MT5 verified'), 'verified mark survives reload');
 
