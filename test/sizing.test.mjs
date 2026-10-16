@@ -361,7 +361,7 @@ c = M.mt5SpecCheck(US100, '10', 'USD', '');
 ok(c && !c.ok && c.issues.length === 1 && c.issues[0].mt5 === 10, 'US100 contract size 10 ⇒ size mismatch');
 //     ETH/USD real spec (screenshot): Kontraktgröße 10 — the old preset cv 1 was 10× off.
 const BTCUSD = presetByName('BTC/USD');
-eq(BTCUSD.cv, 1, 'BTC/USD cv == 1 (FTMO contract size 1, checked in MT5)');
+eq(BTCUSD.cv, 1, 'BTC/USD cv == 1 (FTMO contract size 1, MT5 screenshot)');
 eq(BTCUSD.mt5, '2026-10-16', 'BTC/USD carries the MT5-verified date');
 ok(M.mt5SpecCheck(BTCUSD, '1', 'USD', '0.01').ok, 'BTC/USD MT5 spec (1, USD) matches preset');
 eq(ETHUSD.cv, 10, 'ETH/USD cv == 10 (FTMO contract size 10 ETH per lot)');

@@ -48,7 +48,7 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Zweifel in MT5 prüfen (Market Watch → Specification); jedes Instrument hat manuellen Override.
 - **ETH/USD = Kontraktgröße 10 (1 Lot = 10 ETH), nicht 1.** Per MT5-Screenshot 2026-10-16 bestätigt;
   die Online-Recherche (2026-06, „1 Coin“) war falsch, alte Sizes waren 10× zu groß. **MT5 schlägt
-  jede Recherche.** BTC/USD = 1 laut Erik in MT5 geprüft. US500, XAU, XAG sind noch NICHT gegen MT5 geprüft.
+  jede Recherche.** BTC/USD = 1 per MT5-Screenshot bestätigt. US500, XAU, XAG sind noch NICHT gegen MT5 geprüft.
 - **Max-Volumen:** Presets mit `max` (EUR/USD 50, US100 1000, ETH/USD 5, aus MT5) warnen im Sizer,
   wenn die Lots darüber liegen (MT5 lehnt die Order ab).
 - **Broker-Modelle:** FTMO = MT5 CFD, Sizing in Lots. Breakout = Crypto-Perps, Sizing in Coins

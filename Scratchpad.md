@@ -113,7 +113,7 @@ importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Fra
   Schritt 0.01, max 1000, Kommission 0, Tick-Größe/-Wert leer = CFD-Modus), **ETH/USD Kontraktgröße 10**
   (Profit USD, Schritt 0.01, max 5, Kommission 0.0325 % je Seite). ETH war mit cv 1 gesized ⇒ **10× zu
   große Lots**, jetzt cv 10. Max-Volumen-Warnung ergänzt.
-- BTC/USD: laut Erik in MT5 geprüft (2026-10-16), Kontraktgröße 1 ⇒ cv 1 korrekt.
+- BTC/USD: MT5-Screenshot 2026-10-16, Kontraktgröße 1, Profit USD ⇒ cv 1 korrekt.
 - **Noch nicht gegen MT5 geprüft:** US500, XAU/USD,
   XAG/USD, GBP/USD, AUD/USD, JPY-Paare, USD/CAD. Prüfen per „MT5 check“ oder Screenshot.
 - **Offene Frage Kommission:** FTMO EUR/USD laut MT5 2.5 USD pro Lot je Seite (Ein-/Ausgang), also
