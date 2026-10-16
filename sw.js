@@ -10,7 +10,7 @@
 
 'use strict';
 
-var CACHE = 'quicklog-v1';
+var CACHE = 'quicklog-v2';
 
 // App shell — relative paths (GitHub Pages serves this under a subpath).
 var SHELL = [

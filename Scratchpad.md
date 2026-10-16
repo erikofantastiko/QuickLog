@@ -33,6 +33,15 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   statisch; sonst `FX_LOT/entry`, exakt bei Basis=USD (**USD/CAD-Fix**), sonst Cross-Approx mit
   sichtbarem „verify in MT5"-Hint. Keine Cross-Rate-Abfrage (keyless/offline bleibt). Test 25→29.
 
+- **Cross-Rate exakt + Yolo-Extras + MT5-Abgleich** (2026-10-16) — Yolos Dashboard-Rechner geprüft:
+  reiner Aktien-Stückzahlrechner ohne FX-Umrechnung, löst nichts am FX/CFD-Sizing. Dabei echtes Loch
+  geschlossen: Crosses ohne USD (EUR/JPY, GBP/JPY, EUR/GBP) wurden mit `FX_LOT/entry` in Basiswährung
+  gesized (+17 % bis +30 % Risiko). Jetzt `× BASE→USD` aus Kraken-Ticker oder manuell, ohne Kurs kein
+  Ergebnis. Nebenbei: cv-Feld auf 8 dp, vorher floorte z. B. USD/JPY 150→149 bei 1 % auf 1.49 statt
+  1.50. Übernommen von Yolo: R-Ziele + 2-Stop-Plan (ausgeblendet). MT5-Abgleich über Kontraktgröße/Profit-Währung/
+  Volumenschritt (MT5-iOS zeigt keine Tick-Werte) mit „verified“-Haken; EUR/USD per Screenshot im Code
+  verifiziert. Tests 55→137, neuer Browser-Test `test/ui.test.mjs` (63). SW-Cache v2.
+
 ## Backlog (priorisiert)
 
 ### P0 — PWA / Offline-Umstellung  ·  Status: ✅ umgesetzt (Branch loop/p0-pwa, Verifier ausstehend)  ·  Aufwand: M
@@ -98,8 +107,20 @@ importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Fra
 ## Offene Fragen / Annahmen
 
 - **FTMO Contract Values** — ✅ via Online-Recherche gegen EU/classic FTMO verifiziert (Stand
-  2026-06): Contract Sizes korrekt, cv jetzt kontowährungs-bewusst (`ACCOUNT_CCY='USD'`). Verbleibende
-  Unschärfe: Cross-Rate-Paare EUR/JPY, GBP/JPY, EUR/GBP (USD weder Basis noch Quote) — `cv = FX_LOT/entry`
-  ist dort nur eine Näherung, im UI als „≈ cross-rate approx, verify in MT5 / override" markiert. Exakte
-  Auto-Korrektur bräuchte eine USDJPY/GBPUSD-Quelle (bewusst nicht gebaut: bricht keyless/offline). Bei
-  diesen Paaren cv in MT5 prüfen oder manuell überschreiben. Wechsel der Kontowährung: nur `ACCOUNT_CCY`.
+  2026-06). Cross-Paare seit 2026-10 exakt über BASE→USD-Kurs (Kraken oder manuell).
+- **MT5 verifiziert (2026-10-16, Screenshots, im Code als `preset.mt5`):** EUR/USD (100 000 EUR, Profit
+  USD, Schritt 0.01, max 50, Kommission 2.5 USD/Lot je Seite), US100.cash (Kontraktgröße 1, Profit USD,
+  Schritt 0.01, max 1000, Kommission 0, Tick-Größe/-Wert leer = CFD-Modus), **ETH/USD Kontraktgröße 10**
+  (Profit USD, Schritt 0.01, max 5, Kommission 0.0325 % je Seite). ETH war mit cv 1 gesized ⇒ **10× zu
+  große Lots**, jetzt cv 10. Max-Volumen-Warnung ergänzt.
+- BTC/USD: MT5-Screenshot 2026-10-16, Kontraktgröße 1, Profit USD ⇒ cv 1 korrekt.
+- XAU/USD (Kontraktgröße 100) und XAG/USD (5 000), Profit USD: MT5-Screenshot 2026-10-16 ⇒ korrekt.
+- US500.cash: MT5-Screenshot 2026-10-16, Kontraktgröße 1, Profit USD, Schritt 0.01, max 1000 ⇒ korrekt.
+- **Noch nicht gegen MT5 geprüft:** GBP/USD, AUD/USD, JPY-Paare, USD/CAD. Prüfen per „MT5 check“ oder Screenshot.
+- **Offene Frage Kommission:** FTMO EUR/USD laut MT5 2.5 USD pro Lot je Seite (Ein-/Ausgang), also
+  5 USD/Lot round trip. Der Sizer rechnet ohne Kommission ⇒ echter Verlust am SL liegt leicht über dem
+  Ziel (bei 5 Pip SL ≈ +1 %, bei 20 Pip ≈ +0,25 %). Option: `vol = riskAmt / (dist×cv + comm)`.
+  Ändert die Sizing-Invariante ⇒ nur mit Eriks Ja.
+- **Annahme:** Kraken liefert `Ticker?pair=EURUSD` / `GBPUSD` (Spot-FX, ZEURZUSD/ZGBPZUSD). Aus der
+  Cloud-Session nicht erreichbar (Proxy), nur gemockt getestet. Einmal live prüfen; fällt es aus,
+  bleibt das manuelle Feld.
