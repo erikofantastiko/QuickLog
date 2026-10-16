@@ -2,6 +2,13 @@
 
 Version = `APP_VERSION` in `app.js` (also shown in the footer and used as the service-worker cache name).
 
+## 1.1.2 — 2026-10-16
+
+### Changed
+- UI is English throughout: Trade Log labels (Result, Emotions), placeholders, the sheet-extras
+  hint, the "image copied" toast, the MT5 check hint and the "Result" cell on the trade card / PNG.
+  Values exported to the sheet are unchanged.
+
 ## 1.1.1 — 2026-10-16
 
 ### Changed

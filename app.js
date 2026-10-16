@@ -11,7 +11,7 @@ var $ = function(id){ return document.getElementById(id); };
 
 // Release version. Shown in the footer and passed to the service worker as
 // './sw.js?v=…' — bumping it here is the ONE place that rolls the offline cache.
-var APP_VERSION = '1.1.1';
+var APP_VERSION = '1.1.2';
 
 /* ---------- Constants ---------- */
 
@@ -615,7 +615,7 @@ function renderMt5(){
   var out=$('mt5Out'), p=currentPreset();
   if(!out||!p) return;
   var c=mt5SpecCheck(p,$('mt5Cs').value,$('mt5Ccy').value,$('mt5Step').value);
-  if(!c){ out.innerHTML='<div class="sz-note">MT5 → '+esc(p.s)+' → Specification: copy Kontraktgröße (Contract size), Profit-Währung, Volumenschritt.</div>'; return; }
+  if(!c){ out.innerHTML='<div class="sz-note">MT5 → '+esc(p.s)+' → Specification: copy Contract size, Profit currency, Volume step.</div>'; return; }
   if(c.ok){
     var exp=presetSpec(p);
     state.verified[verifyKey(p)]={cs:exp.cs, ccy:exp.ccy, date:today()};
@@ -709,7 +709,7 @@ function cardHtml(d){
   // so an open trade keeps the card free of empty placeholders.
   var extras='';
   if(d.exit)    extras+=cell('Exit',esc(d.exit));
-  if(d.result)  extras+=cell('Ergebnis',esc(d.result));
+  if(d.result)  extras+=cell('Result',esc(d.result));
   if(d.riskUsd) extras+=cell('Risk $',esc(d.riskUsd));
   var extrasRow = extras ? '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">'+extras+'</div>' : '';
 
@@ -845,7 +845,7 @@ function exportNodePng(tmp, filenameBase, btn, btnLabel){
     var blobPromise=html2canvas(tmp,{backgroundColor:'#0c0c0e',scale:2,useCORS:true,logging:false})
       .then(function(c){ if(tmp.parentNode) document.body.removeChild(tmp); return new Promise(function(res){ c.toBlob(function(bl){res(bl);}, 'image/png'); }); });
     navigator.clipboard.write([new ClipboardItem({'image/png': blobPromise})])
-      .then(function(){ restore(); toast('Bild kopiert — in X einfügen ✓'); })
+      .then(function(){ restore(); toast('Image copied — paste into X ✓'); })
       .catch(function(){
         blobPromise.then(function(bl){ if(!bl){ restore(); toast('Copy failed'); return; } downloadBlob(bl); })
           .catch(function(e){ if(tmp.parentNode) document.body.removeChild(tmp); restore(); toast('Error: '+e.message); });

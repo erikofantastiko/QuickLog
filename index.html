@@ -136,7 +136,7 @@
     </div>
     <div class="fi" style="margin-bottom:12px">
       <label for="tdKey">Twelve Data API key <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(FX / metals — real lines · stored locally only · <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener" style="color:var(--tx3)">free key</a>)</span></label>
-      <input type="password" id="tdKey" placeholder="Twelve Data API key (FX/Metalle)" autocomplete="off" style="font-family:var(--mn);font-size:14px">
+      <input type="password" id="tdKey" placeholder="Twelve Data API key (FX/metals)" autocomplete="off" style="font-family:var(--mn);font-size:14px">
     </div>
     <div id="chartTf" style="display:none;gap:6px;margin-bottom:10px">
       <button class="tf" data-tf="15m">15m</button>
@@ -272,7 +272,7 @@
         <input type="text" inputmode="decimal" id="exi" placeholder="1.09500" style="font-family:var(--mn)">
       </div>
       <div class="fi">
-        <label for="res">Ergebnis</label>
+        <label for="res">Result</label>
         <select id="res">
           <option value="">—</option><option>Win</option><option>Lose</option><option>Breakeven</option>
         </select>
@@ -292,20 +292,20 @@
 
     <div class="fi">
       <label for="mgmt">Trade Management</label>
-      <input type="text" id="mgmt" placeholder="SL auf BE nach 1R, Teilverkauf...">
+      <input type="text" id="mgmt" placeholder="SL to BE after 1R, partial close...">
     </div>
 
     <div class="fi">
-      <label for="emo">Emotionen</label>
-      <input type="text" id="emo" placeholder="Ruhig, kein FOMO...">
+      <label for="emo">Emotions</label>
+      <input type="text" id="emo" placeholder="Calm, no FOMO...">
     </div>
 
     <div class="fi">
       <label for="fbk">Feedback</label>
-      <input type="text" id="fbk" placeholder="Entry zu früh, auf Retest warten...">
+      <input type="text" id="fbk" placeholder="Entry too early, wait for the retest...">
     </div>
 
-    <div class="hint" style="margin-top:0">Alles optional — leere Felder bleiben leere Zellen (offene Trades OK). PnL&nbsp;(%), Risk/Reward, R&nbsp;Ergebnis und Kumulatives&nbsp;R rechnet das Sheet selbst.</div>
+    <div class="hint" style="margin-top:0">All optional — empty fields stay empty cells (open trades OK). PnL&nbsp;(%), Risk/Reward, R&nbsp;result and cumulative&nbsp;R are calculated by the sheet.</div>
   </div>
 
   <div class="ar">
