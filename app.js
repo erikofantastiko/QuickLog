@@ -32,7 +32,8 @@ var PRESETS = {
     {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:SPX500USD'},
     {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD'},
     {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',tv:'OANDA:XAGUSD'},
-    {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'≈ 1 unit per lot',tv:'BITSTAMP:BTCUSD'},
+    // mt5: Erik checked FTMO MT5 2026-10-16 — Kontraktgröße 1 (1 lot = 1 BTC). Max volume not captured.
+    {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'1 lot = 1 BTC → $1 / $1 move',tv:'BITSTAMP:BTCUSD',mt5:'2026-10-16'},
     // mt5: checked by Erik in MT5 2026-10-16 (no screenshot) — contract size 1, profit USD.
     // mt5: FTMO MT5 screenshot 2026-10-16 — Kontraktgröße 10 (NOT 1: 1 lot = 10 ETH), Profit USD, step 0.01,
     // max 5 lots, commission 0.0325 % per side. Was cv 1 before ⇒ sizes were 10× too large.

@@ -48,7 +48,7 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Zweifel in MT5 prüfen (Market Watch → Specification); jedes Instrument hat manuellen Override.
 - **ETH/USD = Kontraktgröße 10 (1 Lot = 10 ETH), nicht 1.** Per MT5-Screenshot 2026-10-16 bestätigt;
   die Online-Recherche (2026-06, „1 Coin“) war falsch, alte Sizes waren 10× zu groß. **MT5 schlägt
-  jede Recherche.** BTC/USD (cv 1), US500, XAU, XAG sind noch NICHT gegen MT5 geprüft.
+  jede Recherche.** BTC/USD = 1 laut Erik in MT5 geprüft. US500, XAU, XAG sind noch NICHT gegen MT5 geprüft.
 - **Max-Volumen:** Presets mit `max` (EUR/USD 50, US100 1000, ETH/USD 5, aus MT5) warnen im Sizer,
   wenn die Lots darüber liegen (MT5 lehnt die Order ab).
 - **Broker-Modelle:** FTMO = MT5 CFD, Sizing in Lots. Breakout = Crypto-Perps, Sizing in Coins
@@ -69,7 +69,7 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
 
 - Schnelle Syntaxprüfung: `node --check app.js` (die Logik liegt jetzt direkt in `app.js`, keine
   `<script>`-Extraktion mehr nötig).
-- Geld-Mathematik: `node test/sizing.test.mjs` — 131 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
+- Geld-Mathematik: `node test/sizing.test.mjs` — 134 Assertions (SHEET_COLUMNS 23/28 inkl. Buchstaben-
   Mapping A–W, leere Formelspalten M/N/O/P, Live↔Backtest-Ausrichtung, `contractValueFor`
   statisch/derive/**cross exakt** EUR/JPY, GBP/JPY, EUR/GBP inkl. „ohne Kurs → NaN“, Sizing EUR/USD,
   JPY, GBP/JPY 1.50 & EUR/JPY 1.45, `roundVol`-Edges, `rTargets`, `twoStopPlan` inkl. Step-Split,

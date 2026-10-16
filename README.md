@@ -45,7 +45,7 @@ official FTMO spec sheet. Formula used: `CV = Risk$ / (Lot × SL-distance)`.
 | US500 (SPX) | 1 | FTMO CFD logic, analogous to US100 |
 | XAU/USD | 100 | 1 lot = 100 oz |
 | XAG/USD | 5000 | 1 lot = 5000 oz |
-| BTC/USD | 1 | logged FTMO trades — **not yet checked in MT5** |
+| BTC/USD | 1 | FTMO MT5: contract size 1 (checked 2026-10-16) |
 | ETH/USD | 10 | FTMO MT5: contract size 10 (1 lot = 10 ETH), max 5 lots |
 
 **Verify against MT5 before trusting blindly.** FTMO does not publish a central CV table; the exact

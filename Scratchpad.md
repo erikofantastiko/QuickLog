@@ -40,7 +40,7 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   Ergebnis. Nebenbei: cv-Feld auf 8 dp, vorher floorte z. B. USD/JPY 150→149 bei 1 % auf 1.49 statt
   1.50. Übernommen von Yolo: R-Ziele + 2-Stop-Plan (ausgeblendet). MT5-Abgleich über Kontraktgröße/Profit-Währung/
   Volumenschritt (MT5-iOS zeigt keine Tick-Werte) mit „verified“-Haken; EUR/USD per Screenshot im Code
-  verifiziert. Tests 55→131, neuer Browser-Test `test/ui.test.mjs` (63). SW-Cache v2.
+  verifiziert. Tests 55→134, neuer Browser-Test `test/ui.test.mjs` (63). SW-Cache v2.
 
 ## Backlog (priorisiert)
 
@@ -113,7 +113,8 @@ importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Fra
   Schritt 0.01, max 1000, Kommission 0, Tick-Größe/-Wert leer = CFD-Modus), **ETH/USD Kontraktgröße 10**
   (Profit USD, Schritt 0.01, max 5, Kommission 0.0325 % je Seite). ETH war mit cv 1 gesized ⇒ **10× zu
   große Lots**, jetzt cv 10. Max-Volumen-Warnung ergänzt.
-- **Noch nicht gegen MT5 geprüft:** BTC/USD (cv 1, nach dem ETH-Befund verdächtig), US500, XAU/USD,
+- BTC/USD: laut Erik in MT5 geprüft (2026-10-16), Kontraktgröße 1 ⇒ cv 1 korrekt.
+- **Noch nicht gegen MT5 geprüft:** US500, XAU/USD,
   XAG/USD, GBP/USD, AUD/USD, JPY-Paare, USD/CAD. Prüfen per „MT5 check“ oder Screenshot.
 - **Offene Frage Kommission:** FTMO EUR/USD laut MT5 2.5 USD pro Lot je Seite (Ein-/Ausgang), also
   5 USD/Lot round trip. Der Sizer rechnet ohne Kommission ⇒ echter Verlust am SL liegt leicht über dem
