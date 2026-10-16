@@ -179,23 +179,34 @@ const SHEET_BASELINE = '\t16/10/2026 10:30\tEURUSD\t\t1.08500\t\t1.08300\t1.0890
   eq(rows.length, 5, 'five R target rows');
   ok(rows[0].includes('1.08700') && rows[0].includes('+$1,000'), '1R long ⇒ 1.08700, +$1,000');
   ok(rows[4].includes('1.10500') && rows[4].includes('+$10,000'), '10R long ⇒ 1.10500, +$10,000');
-  eq(await page.locator('#szTwoStop').count(), 0, '2-stop plan hidden by default');
+  eq(await page.locator('#szTwoStop').count(), 0, '2-stop plan off by default');
+  ok(await page.isVisible('#stopSingle') && await page.isVisible('#stopTwo'), 'Stops switch (Single | 2-Stop) is visible');
+  eq(await page.getAttribute('#stopSingle', 'aria-pressed'), 'true', 'Single stop is the default');
 
-  await page.click('[data-act="twostop"]');
-  ok(await page.isVisible('#szTwoStop'), '2-stop toggle shows the plan');
+  await page.click('#stopTwo');
+  ok(await page.isVisible('#szTwoStop'), '2-Stop switch turns the plan on');
+  eq(await page.getAttribute('#stopTwo', 'aria-pressed'), 'true', '2-Stop button shows as active');
   const ts = await page.locator('#szTwoStop tbody tr').allInnerTexts();
   ok(ts[0].includes('1.08400') && ts[0].includes('2.50') && ts[0].includes('$250'), 'stop 1: 1.08400, 2.50 lots, −$250');
   ok(ts[1].includes('1.08300') && ts[1].includes('2.50') && ts[1].includes('$500'), 'stop 2: 1.08300, 2.50 lots, −$500');
   ok(ts[2].includes('$750') && ts[2].includes('0.75R'), 'total −$750 = 0.75R');
-  eq(await vol(page), '5.00', 'showing the 2-stop plan does not change the size');
+  eq(await vol(page), '5.00', 'turning the 2-stop plan on does not change the size');
 
   await page.reload();
-  ok(await page.isVisible('#szTwoStop'), '2-stop open state survives reload');
-  await page.click('[data-act="twostop"]');
+  ok(await page.isVisible('#szTwoStop'), '2-Stop on survives reload');
+  eq(await page.getAttribute('#stopTwo', 'aria-pressed'), 'true', '2-Stop button still active after reload');
+  await page.click('#stopSingle');
+  eq(await page.locator('#szTwoStop').count(), 0, 'Single stop switch turns the plan off');
   await page.click('[data-act="rtargets"]');
   await page.reload();
-  eq(await page.locator('#szTwoStop').count(), 0, '2-stop closed state survives reload');
+  eq(await page.locator('#szTwoStop').count(), 0, '2-Stop off survives reload');
+  eq(await page.getAttribute('#stopSingle', 'aria-pressed'), 'true', 'Single stop still active after reload');
   eq(await page.locator('#szRTargets').count(), 0, 'R targets collapsed state survives reload');
+
+  // 3a. Switch works both ways repeatedly.
+  await page.click('#stopTwo'); await page.click('#stopSingle'); await page.click('#stopTwo');
+  ok(await page.isVisible('#szTwoStop'), 'toggle on/off/on ends on');
+  await page.click('#stopSingle');
 
   // 3b. Short: targets below entry.
   await page.click('[data-act="rtargets"]');

@@ -11,7 +11,7 @@ var $ = function(id){ return document.getElementById(id); };
 
 // Release version. Shown in the footer and passed to the service worker as
 // './sw.js?v=…' — bumping it here is the ONE place that rolls the offline cache.
-var APP_VERSION = '1.1.0';
+var APP_VERSION = '1.1.1';
 
 /* ---------- Constants ---------- */
 
@@ -111,7 +111,7 @@ var state = {
   fxRates:{},         // cross-pair BASE→USD rates {EUR:{v,src:'kraken'|'manual',at}} — persisted
   fxStatus:{},        // per-base fetch status ('loading'|'error'|'') — session only
   verified:{},        // MT5 check results {'ftmo|US100 (NDX)':{cs,ccy,date}} — persisted
-  twoStopOpen:false,  // Yolo 2-stop plan in the sizer result — hidden by default
+  twoStopOpen:false,  // Yolo 2-stop plan on/off (Stops: Single | 2-Stop switch) — off by default
   rTargetsOpen:true,  // R-target table (1/2/3/5/10R) in the sizer result
   chartInterval:'1h', // LWC timeframe ('15m'|'1h'|'4h'|'1d'); maps to Kraken minutes / TD strings
   lwc:null            // active Lightweight Charts crypto chart {chart,series,lines:[],resize} or null
@@ -522,8 +522,8 @@ function sizerExtrasHtml(r, rv){
     });
     h+='</tbody></table>';
   }
-  h+='<button class="sz-xt" data-act="twostop" aria-expanded="'+state.twoStopOpen+'">2-Stop plan '+(state.twoStopOpen?'▴':'▾')+'</button>';
   if(state.twoStopOpen){
+    h+='<div class="sz-xt" style="cursor:default">2-Stop plan</div>';
     var t=twoStopPlan(e,s,rv,cv);
     if(t.v1<=0){
       h+='<div class="sz-note" id="szTwoStop">Position too small to split (step '+stepFor()+')</div>';
@@ -538,12 +538,24 @@ function sizerExtrasHtml(r, rv){
   return h+'</div>';
 }
 
+// Stops switch (Single | 2-Stop): turns the 2-stop plan in the result on or off. Persisted.
+function setStopMode(two){
+  state.twoStopOpen=!!two;
+  applyStopMode();
+  update();
+}
+function applyStopMode(){
+  var a=$('stopSingle'), b=$('stopTwo');
+  if(!a||!b) return;
+  a.className='mb'+(state.twoStopOpen?'':' on'); a.setAttribute('aria-pressed', state.twoStopOpen?'false':'true');
+  b.className='mb'+(state.twoStopOpen?' on':''); b.setAttribute('aria-pressed', state.twoStopOpen?'true':'false');
+}
+
 function onSzOutClick(ev){
   var b=ev.target.closest ? ev.target.closest('[data-act]') : null;
   if(!b) return;
   var a=b.getAttribute('data-act');
   if(a==='rtargets') state.rTargetsOpen=!state.rTargetsOpen;
-  else if(a==='twostop') state.twoStopOpen=!state.twoStopOpen;
   else return;
   update();
 }
@@ -1476,6 +1488,7 @@ function loadState(){
   if(s.fxRates && typeof s.fxRates==='object') state.fxRates=s.fxRates;
   if(s.verified && typeof s.verified==='object') state.verified=s.verified;
   if(s.twoStopOpen!=null) state.twoStopOpen=!!s.twoStopOpen;
+  applyStopMode();
   if(s.rTargetsOpen!=null) state.rTargetsOpen=!!s.rTargetsOpen;
   if(s.feedOverride!=null) state.feedOverride=s.feedOverride;
   // Restore the LWC timeframe BEFORE the chartOpen renderChart() below so the
@@ -1522,6 +1535,8 @@ function bind(){
   on('cv','input',function(){ state.cvManual=true; update(); });
   on('fxRate','input',onFxRateInput);
   on('szOut','click',onSzOutClick);
+  on('stopSingle','click',function(){ setStopMode(false); });
+  on('stopTwo','click',function(){ setStopMode(true); });
   on('mt5Toggle','click',toggleMt5);
   on('mt5Cs','input',renderMt5);
   on('mt5Ccy','input',function(){ this.value=this.value.toUpperCase(); renderMt5(); });

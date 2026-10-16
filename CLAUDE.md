@@ -74,7 +74,8 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   veröffentlichte Seite ist keyless.
 
 - **Sizer-Extras (nur Anzeige):** R-Ziele 1/2/3/5/10R (Default offen) und Yolo-2-Stop-Plan (½ bei
-  0.5R raus, Rest am SL, Größe nicht hochskaliert ⇒ 0.75R; **Default ausgeblendet**). MT5-Abgleich:
+  0.5R raus, Rest am SL, Größe nicht hochskaliert ⇒ 0.75R). Ein/Aus per Schalter „Stops: Single stop |
+  2-Stop“ unter Take Profit (`state.twoStopOpen`, persistiert, **Default Single**). MT5-Abgleich:
   Kontraktgröße / Profit-Währung / Volumenschritt (das zeigt die MT5-iOS-App; Tick size/value nicht)
   gegen `presetSpec` (FX: `FX_LOT` + quote, sonst `preset.cv` + USD). Treffer ⇒ `state.verified[brk|inst]`,
   gilt nur solange Contract size + Währung des Presets gleich bleiben. `preset.mt5` = im Code
@@ -96,10 +97,10 @@ Webseite. Kein Backend. Gehostet auf GitHub Pages.
   Formeln/Werte direkt aus dem Quelltext (kein hartkodiertes Replikat) → regrediert bei gebrochener Mathematik.
   Quelle ist seit dem PWA-Split `app.js` (nicht mehr `index.html`). Bei `const`/Arrow bricht die
   Extraktion laut (Testfehler, nie still grün).
-- Browser: `node test/ui.test.mjs` — 63 Checks, Playwright + Chromium headless (global `playwright`
+- Browser: `node test/ui.test.mjs` — 70 Checks, Playwright + Chromium headless (global `playwright`
   nötig, fehlt es ⇒ Exit 1). Eigener Static-Server, Kraken per `page.route` gemockt, alles andere
   Externe geblockt. Prüft Cross-Sizing, Kraken-Ausfall ⇒ kein Ergebnis, manuellen Kurs + Reload,
-  R-Ziele, 2-Stop (Default aus, Toggle, Persistenz), MT5-Abgleich und „Copy for Sheet“
+  R-Ziele, 2-Stop-Schalter (Default Single, an/aus, Persistenz), MT5-Abgleich und „Copy for Sheet“
   byte-identisch zur Baseline von vor der Änderung.
 - Voller Test: lokal servieren (`npx serve` / `python -m http.server`) und im Browser durchklicken.
   Persistenz: ausfüllen → reload → Felder bleiben.

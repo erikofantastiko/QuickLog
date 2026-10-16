@@ -111,7 +111,8 @@ contract size is the field that counts.
 
 **R targets & 2-stop plan.** The sizer result lists price and $ P&L at 1/2/3/5/10R (with the
 rounded size). A 2-stop plan (half out at 0.5R, rest at the SL → total loss 0.75R; size is not
-scaled up) can be shown with "2-Stop plan"; it is hidden by default. Both are display only.
+scaled up) is switched on or off with "Stops: Single stop | 2-Stop" below Take Profit (default:
+Single stop; the choice is remembered). Both are display only.
 
 **Breakout** is crypto-only (since Feb 2024), perpetuals, Kraken-backed feeds. Sizing is in coins:
 `coins = Risk$ / |Entry − SL|` (CV = 1). No FX/indices/metals on Breakout.
