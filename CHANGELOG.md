@@ -2,6 +2,12 @@
 
 Version = `APP_VERSION` in `app.js` (also shown in the footer and used as the service-worker cache name).
 
+## 1.1.1 — 2026-10-16
+
+### Changed
+- 2-stop plan: on/off switch "Stops: Single stop | 2-Stop" below Take Profit (like Yolo's calculator)
+  instead of a collapsible header in the result. Default Single stop, choice is remembered.
+
 ## 1.1.0 — 2026-10-16
 
 ### Fixed

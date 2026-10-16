@@ -111,6 +111,14 @@
     <input type="text" inputmode="decimal" id="szTP" placeholder="1.09500" style="font-family:var(--mn)">
   </div>
 
+  <div class="fi">
+    <label>Stops <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(2-Stop: ½ out at 0.5R, rest at SL)</span></label>
+    <div class="mr" style="margin-bottom:0" role="group" aria-label="Stop mode">
+      <button class="mb on" id="stopSingle" type="button" aria-pressed="true">Single stop</button>
+      <button class="mb" id="stopTwo" type="button" aria-pressed="false">2-Stop</button>
+    </div>
+  </div>
+
   <div class="sl">Result</div>
   <div class="sz-out" id="szOut"></div>
 
