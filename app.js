@@ -89,6 +89,11 @@ var state = {
   feedOverride:'',
   cvManual:false,     // true once the user types into the Contract Value field
   dirManual:false,    // true once the user clicks Long/Short; auto-detect from entry vs SL until then
+  fxRates:{},         // cross-pair BASE→USD rates {EUR:{v,src:'kraken'|'manual',at}} — persisted
+  fxStatus:{},        // per-base fetch status ('loading'|'error'|'') — session only
+  verified:{},        // MT5 check results {'ftmo|US100 (NDX)':{cv,date}} — persisted
+  twoStopOpen:false,  // Yolo 2-stop plan in the sizer result — hidden by default
+  rTargetsOpen:true,  // R-target table (1/2/3/5/10R) in the sizer result
   chartInterval:'1h', // LWC timeframe ('15m'|'1h'|'4h'|'1d'); maps to Kraken minutes / TD strings
   lwc:null            // active Lightweight Charts crypto chart {chart,series,lines:[],resize} or null
 };
@@ -152,40 +157,116 @@ function stepDecimals(){ var st=String(stepFor()); var i=st.indexOf('.'); return
 // Resolve the contract value (ACCOUNT_CCY value of a 1.0 price move per lot) for a preset
 // given the current entry. P&L accrues in the quote currency, then converts to ACCOUNT_CCY:
 //   quote === ACCOUNT_CCY → cv = static notional (exact; e.g. EUR/USD on a USD account).
-//   otherwise             → cv = FX_LOT / entry — exact when base === ACCOUNT_CCY (USD is the
-//                           base, e.g. USD/JPY, USD/CAD); for true cross pairs (USD neither
-//                           base nor quote) it is a first-order proxy, flagged in the UI.
+//   base  === ACCOUNT_CCY → cv = FX_LOT / entry (exact; USD/JPY, USD/CAD).
+//   cross (USD neither)   → cv = FX_LOT / entry × baseRate, baseRate = BASE→ACCOUNT_CCY
+//                           (e.g. EURUSD for EUR/JPY and EUR/GBP, GBPUSD for GBP/JPY). Exact:
+//                           quote→USD = baseUSD / (base/quote price). Without a valid baseRate
+//                           the result is NaN → no size (FX_LOT/entry alone is in BASE currency
+//                           and over-sizes by the baseUSD factor, ~17–30 %).
 // Presets without a `quote` (indices/metals/crypto, all ACCOUNT_CCY-quoted) stay static.
-function contractValueFor(preset, entryStr){
+function contractValueFor(preset, entryStr, baseRateStr){
   if(!preset) return NaN;
   if(preset.quote && preset.quote!==ACCOUNT_CCY){
     var e=parseNum(entryStr);
     if(isNaN(e)||e<=0) return NaN;
-    return FX_LOT/e;
+    if(preset.base===ACCOUNT_CCY) return FX_LOT/e;
+    var b=parseNum(baseRateStr);
+    if(isNaN(b)||b<=0) return NaN;
+    return FX_LOT/e*b;
   }
   return parseNum(preset.cv);
 }
 
+// Base currency of a true cross pair (USD neither base nor quote), else ''.
+// Those pairs need a BASE→ACCOUNT_CCY rate for an exact cv.
+function crossBase(preset){
+  return (preset && preset.quote && preset.quote!==ACCOUNT_CCY && preset.base && preset.base!==ACCOUNT_CCY) ? preset.base : '';
+}
+
+// Current BASE→ACCOUNT_CCY rate string for a cross base ('' if unknown).
+function fxRateFor(base){
+  var r=base && state.fxRates[base];
+  return r ? String(r.v) : '';
+}
+
 // Keep the Contract Value field + hint in sync with instrument & entry.
 // Entry-derived pairs (quote ≠ ACCOUNT_CCY) auto-fill the field unless the user overrode it;
-// true cross pairs (base also ≠ ACCOUNT_CCY) are flagged as an approximation to verify/override.
+// true cross pairs additionally need the BASE→USD rate (#fxRate: Kraken auto or manual).
 function syncContractValue(){
   var p=currentPreset();
   if(!p) return;
   var hintEl=$('cvHint'), cvEl=$('cv');
   var derives = !!(p.quote && p.quote!==ACCOUNT_CCY);
-  var cross   = derives && p.base!==ACCOUNT_CCY;
+  var base    = crossBase(p);
+  syncFxRateField(base);
   if(derives && !state.cvManual){
-    var derived=contractValueFor(p,$('szEntry').value);
-    cvEl.value=isNaN(derived)?'':derived.toFixed(2);
-    hintEl.textContent = cross
-      ? '(≈ 100,000 ÷ entry — cross-rate approx, verify in MT5 / override)'
-      : '(= 100,000 ÷ entry — auto from entry price)';
+    var derived=contractValueFor(p,$('szEntry').value,fxRateFor(base));
+    // Full precision (8 dp), not 2: calcSize reads this field, and a cv rounded UP
+    // (666.67 for 666.666…) floors e.g. 1.50 lots to 1.49.
+    cvEl.value=isNaN(derived)?'':String(+derived.toFixed(8));
+    if(!base) hintEl.textContent='(= 100,000 ÷ entry — auto from entry price)';
+    else if(fxRateFor(base)) hintEl.textContent='(= 100,000 ÷ entry × '+base+ACCOUNT_CCY+')';
+    else hintEl.textContent='('+base+ACCOUNT_CCY+' rate needed for an exact size)';
   } else if(derives && state.cvManual){
     hintEl.textContent='(manual override — auto-derive off)';
   } else {
-    hintEl.textContent='('+p.hint+')';
+    var v=verifiedFor(p);
+    hintEl.textContent='('+p.hint+(v&&!state.cvManual?' · ✓ MT5 verified '+v.date:'')+')';
   }
+}
+
+// Show/fill the BASE→USD rate field for cross pairs; hidden otherwise.
+function syncFxRateField(base){
+  var wrap=$('fxRateWrap');
+  if(!wrap) return;
+  wrap.style.display=base?'block':'none';
+  if(!base) return;
+  $('fxRateLabel').textContent=base+'→'+ACCOUNT_CCY+' rate';
+  var inp=$('fxRate');
+  // Don't clobber what the user is typing right now.
+  if(document.activeElement!==inp) inp.value=fxRateFor(base);
+  var r=state.fxRates[base], st=state.fxStatus[base], src;
+  if(st==='loading') src='fetching from Kraken…';
+  else if(r && r.src==='manual') src='manual — clear the field to auto-fetch';
+  else if(r) src='Kraken '+r.at+(st==='error'?' · refresh failed, last known value':'');
+  else if(st==='error') src='Kraken unavailable — enter '+base+ACCOUNT_CCY+' manually (MT5 / TradingView)';
+  else src='';
+  $('fxRateHint').textContent=src?'('+src+')':'';
+}
+
+// Fetch BASE→USD from Kraken's public ticker (keyless; same host as the OHLC feed).
+// Manual values are never overwritten. Fetched at most once per base per page load.
+var fxFetched={};
+function fetchFxRate(base){
+  if(!base || fxFetched[base]) return;
+  if(state.fxRates[base] && state.fxRates[base].src==='manual') return;
+  fxFetched[base]=true;
+  state.fxStatus[base]='loading';
+  fetch('https://api.kraken.com/0/public/Ticker?pair='+base+ACCOUNT_CCY)
+    .then(function(res){ if(!res.ok) throw new Error('http '+res.status); return res.json(); })
+    .then(function(j){
+      if(!j || (j.error && j.error.length) || !j.result) throw new Error('kraken error');
+      var k=Object.keys(j.result)[0];
+      var v=k && j.result[k].c ? parseFloat(j.result[k].c[0]) : NaN;
+      if(isNaN(v)||v<=0) throw new Error('bad rate');
+      // A manual entry made while the request was in flight wins.
+      if(!(state.fxRates[base] && state.fxRates[base].src==='manual')){
+        state.fxRates[base]={v:v, src:'kraken', at:new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})};
+      }
+      state.fxStatus[base]='';
+    })
+    .catch(function(){ state.fxStatus[base]='error'; })
+    .then(function(){ update(); });
+}
+
+// User typed into the rate field: pin it as manual; clearing it reverts to auto-fetch.
+function onFxRateInput(){
+  var base=crossBase(currentPreset());
+  if(!base) return;
+  var v=$('fxRate').value.trim();
+  if(v){ state.fxRates[base]={v:v, src:'manual'}; }
+  else { delete state.fxRates[base]; fxFetched[base]=false; fetchFxRate(base); }
+  update();
 }
 
 // Sizer risk %: 'custom' select value falls back to the free-text field,
@@ -223,7 +304,14 @@ function renderSize(){
   var unit=p?p.unit:'lots';
   var r=calcSize();
   var out=$('szOut');
-  if(!r){ out.innerHTML='<div style="color:var(--tx3);text-align:center;padding:8px">Enter account, entry, stop &amp; contract value</div>'; return; }
+  if(!r){
+    var base=crossBase(p);
+    var msg = (base && !state.cvManual && !fxRateFor(base) && !isNaN(parseNum($('szEntry').value)))
+      ? 'Enter the '+base+'→'+ACCOUNT_CCY+' rate above — without it '+esc(p.s)+' would be over-sized'
+      : 'Enter account, entry, stop &amp; contract value';
+    out.innerHTML='<div style="color:var(--tx3);text-align:center;padding:8px">'+msg+'</div>';
+    return;
+  }
   // Floor the raw volume to the tradeable step before display/transfer; raw
   // sizing math (calcSize) stays untouched. rv==0 means vol < one step.
   var rv=roundVol(r.vol), st=stepFor();
@@ -247,7 +335,137 @@ function renderSize(){
     +'<div class="sz-cell"><div class="cpl">Risk</div><div class="cpv">$'+r.riskAmt.toFixed(0)+'</div></div>'
     +'<div class="sz-cell"><div class="cpl">SL Distance</div><div class="cpv">'+r.dist.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')+'</div></div>'
     +'<div class="sz-cell"><div class="cpl">Reward</div><div class="cpv">'+(r.rewardAmt?'$'+r.rewardAmt.toFixed(0):'—')+'</div></div>'
-    +'</div>'+warn;
+    +'</div>'+warn
+    +(rv>0 ? sizerExtrasHtml(r, rv) : '');
+}
+
+/* ---------- Sizer extras: R targets + 2-stop plan (Yolo-style, display only) ---------- */
+
+var R_MULTIPLES = [1,2,3,5,10];
+
+// Decimal places to show prices with: as typed in Entry (min 2, max 6).
+function priceDecimals(str){
+  var t=String(str).replace(',','.').trim(), i=t.indexOf('.');
+  var d = i<0 ? 0 : t.length-i-1;
+  return Math.min(6, Math.max(2, d));
+}
+
+// Price + $ P&L at 1/2/3/5/10R for the ROUNDED volume. Direction from sign(entry − SL).
+// price<=0 (deep short targets) is reported as null.
+function rTargets(e, s, vol, cv){
+  var dir = e>s ? 1 : -1, dist=Math.abs(e-s);
+  return R_MULTIPLES.map(function(m){
+    var px=e+dir*m*dist;
+    return {m:m, price: px>0?px:null, gain: vol*dist*cv*m};
+  });
+}
+
+// Yolo 2-stop system: half the position out at 0.5R, the rest at the full SL.
+// Size is NOT scaled up (as in Yolo), so the full loss is ~0.75R of the target risk.
+// Stop-1 volume is floored to the tradeable step; stop 2 carries the remainder.
+function twoStopPlan(e, s, vol, cv){
+  var dist=Math.abs(e-s), dir = e>s ? 1 : -1, st=stepFor();
+  var v1=roundVol(vol/2);
+  var v2=Math.round((vol-v1)/st)*st;
+  var s1=e-dir*0.5*dist;
+  var l1=v1*0.5*dist*cv, l2=v2*dist*cv, full=vol*dist*cv;
+  return {s1:s1, v1:v1, loss1:l1, s2:s, v2:v2, loss2:l2, total:l1+l2, totalR: full>0 ? (l1+l2)/full : 0};
+}
+
+function sizerExtrasHtml(r, rv){
+  var e=parseNum($('szEntry').value), s=parseNum($('szSL').value), cv=parseNum($('cv').value);
+  var pd=priceDecimals($('szEntry').value), vd=stepDecimals();
+  function money(v){ return '$'+Math.round(v).toLocaleString('en-US'); }
+  var h='<div class="sz-x">';
+  h+='<button class="sz-xt" data-act="rtargets" aria-expanded="'+state.rTargetsOpen+'">R targets '+(state.rTargetsOpen?'▴':'▾')+'</button>';
+  if(state.rTargetsOpen){
+    h+='<table class="sz-tb" id="szRTargets"><thead><tr><th>R</th><th>Price</th><th>P&amp;L</th></tr></thead><tbody>';
+    rTargets(e,s,rv,cv).forEach(function(t){
+      h+='<tr><td>'+t.m+'R</td><td>'+(t.price==null?'—':t.price.toFixed(pd))+'</td><td class="pos">+'+money(t.gain)+'</td></tr>';
+    });
+    h+='</tbody></table>';
+  }
+  h+='<button class="sz-xt" data-act="twostop" aria-expanded="'+state.twoStopOpen+'">2-Stop plan '+(state.twoStopOpen?'▴':'▾')+'</button>';
+  if(state.twoStopOpen){
+    var t=twoStopPlan(e,s,rv,cv);
+    if(t.v1<=0){
+      h+='<div class="sz-note" id="szTwoStop">Position too small to split (step '+stepFor()+')</div>';
+    } else {
+      h+='<table class="sz-tb" id="szTwoStop"><thead><tr><th>Level</th><th>Price</th><th>Size</th><th>At stop</th></tr></thead><tbody>'
+        +'<tr><td>Stop 1 · ½ at 0.5R</td><td>'+t.s1.toFixed(pd)+'</td><td>'+t.v1.toFixed(vd)+'</td><td class="neg">−'+money(t.loss1)+'</td></tr>'
+        +'<tr><td>Stop 2 · rest</td><td>'+t.s2.toFixed(pd)+'</td><td>'+t.v2.toFixed(vd)+'</td><td class="neg">−'+money(t.loss2)+'</td></tr>'
+        +'<tr class="sum"><td>Total risk</td><td></td><td>'+rv.toFixed(vd)+'</td><td class="neg">−'+money(t.total)+' ('+t.totalR.toFixed(2)+'R)</td></tr>'
+        +'</tbody></table>';
+    }
+  }
+  return h+'</div>';
+}
+
+function onSzOutClick(ev){
+  var b=ev.target.closest ? ev.target.closest('[data-act]') : null;
+  if(!b) return;
+  var a=b.getAttribute('data-act');
+  if(a==='rtargets') state.rTargetsOpen=!state.rTargetsOpen;
+  else if(a==='twostop') state.twoStopOpen=!state.twoStopOpen;
+  else return;
+  update();
+}
+
+/* ---------- MT5 check (Market Watch → Specification: Tick size / Tick value) ---------- */
+
+// cv per MT5 = Tick value / Tick size (tick value is in account currency). ok within 1 %.
+function mt5CvCheck(tickSizeStr, tickValueStr, cvStr){
+  var ts=parseNum(tickSizeStr), tv=parseNum(tickValueStr), cv=parseNum(cvStr);
+  if(isNaN(ts)||isNaN(tv)||ts<=0||tv<=0) return null;
+  var cvMt5=tv/ts;
+  var diff = (!isNaN(cv)&&cv>0) ? (cv-cvMt5)/cvMt5 : NaN;
+  return {cvMt5:cvMt5, diffPct: diff*100, ok: !isNaN(diff) && Math.abs(diff)<=0.01};
+}
+
+function verifyKey(p){ return $('brk').value+'|'+p.s; }
+
+// Stored MT5 verification for a static preset — valid only while the preset cv still matches.
+function verifiedFor(p){
+  if(!p || (p.quote && p.quote!==ACCOUNT_CCY)) return null;
+  var v=state.verified[verifyKey(p)], pc=parseNum(p.cv);
+  if(!v || isNaN(pc) || pc<=0) return null;
+  return Math.abs(v.cv-pc)/pc<=0.01 ? v : null;
+}
+
+function toggleMt5(){
+  var w=$('mt5Wrap'), open=w.style.display==='none';
+  w.style.display=open?'block':'none';
+  $('mt5Toggle').textContent=open?'MT5 check ▴':'MT5 check ▾';
+  if(open) renderMt5();
+}
+
+function renderMt5(){
+  var out=$('mt5Out'), p=currentPreset();
+  if(!out||!p) return;
+  var c=mt5CvCheck($('mt5TickSize').value,$('mt5TickValue').value,$('cv').value);
+  if(!c){ out.innerHTML='<div class="sz-note">From MT5: Market Watch → right-click '+esc(p.s)+' → Specification.</div>'; return; }
+  var derives=!!(p.quote && p.quote!==ACCOUNT_CCY);
+  var cvTxt=c.cvMt5.toLocaleString('en-US',{maximumFractionDigits:4});
+  if(c.ok){
+    if(!derives){
+      state.verified[verifyKey(p)]={cv:c.cvMt5, date:today()};
+      saveState();
+      syncContractValue();
+    }
+    out.innerHTML='<div class="sz-ok">✓ MT5 cv '+cvTxt+' matches'+(derives?' (price-dependent pair — not stored)':' — '+esc(p.s)+' marked verified')+'</div>';
+  } else {
+    out.innerHTML='<div class="sz-warn">MT5 cv '+cvTxt+' ≠ QuickLog cv '+esc($('cv').value||'—')+(isNaN(c.diffPct)?'':' ('+(c.diffPct>0?'+':'')+c.diffPct.toFixed(1)+' %)')
+      +'<br><button class="tf" id="mt5Use" style="margin-top:8px">Use MT5 value</button></div>';
+  }
+}
+
+function useMt5Value(){
+  var c=mt5CvCheck($('mt5TickSize').value,$('mt5TickValue').value,$('cv').value);
+  if(!c) return;
+  $('cv').value=String(+c.cvMt5.toFixed(6));
+  state.cvManual=true;
+  update();
+  renderMt5();
 }
 
 function getAccount(){
@@ -546,6 +764,10 @@ function onBrokerChange(){
 function onInstrumentChange(){
   state.cvManual=false;
   var p=currentPreset();
+  // MT5 tick inputs belong to the previous instrument — never let them verify the new one.
+  ['mt5TickSize','mt5TickValue'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
+  var mo=$('mt5Out'); if(mo) mo.innerHTML='';
+  fetchFxRate(crossBase(p));
   // Static cv only for non-derived pairs; entry-derived ones are filled by syncContractValue().
   if(p && !(p.quote && p.quote!==ACCOUNT_CCY)) $('cv').value=p.cv;
   if(state.chartOpen){
@@ -1019,7 +1241,9 @@ function saveState(){
         direction:state.direction, mode:state.mode, tab:state.tab,
         chartOpen:state.chartOpen, extrasOpen:state.extrasOpen, feedOverride:state.feedOverride,
         cvManual:state.cvManual, dirManual:state.dirManual,
-        chartInterval:state.chartInterval
+        chartInterval:state.chartInterval,
+        fxRates:state.fxRates, verified:state.verified,
+        twoStopOpen:state.twoStopOpen, rTargetsOpen:state.rTargetsOpen
       }
     }));
   }catch(e){ /* storage unavailable / quota — non-fatal */ }
@@ -1049,6 +1273,10 @@ function loadState(){
   // 3) Restore UI state.
   var s=data.state||{};
   if(s.cvManual!=null) state.cvManual=!!s.cvManual;
+  if(s.fxRates && typeof s.fxRates==='object') state.fxRates=s.fxRates;
+  if(s.verified && typeof s.verified==='object') state.verified=s.verified;
+  if(s.twoStopOpen!=null) state.twoStopOpen=!!s.twoStopOpen;
+  if(s.rTargetsOpen!=null) state.rTargetsOpen=!!s.rTargetsOpen;
   if(s.feedOverride!=null) state.feedOverride=s.feedOverride;
   // Restore the LWC timeframe BEFORE the chartOpen renderChart() below so the
   // first chart loads at the saved interval and the active .tf button matches.
@@ -1092,6 +1320,12 @@ function bind(){
   on('szRisk','change',onSzRiskChange);
   on('szRiskCustom','input',update);
   on('cv','input',function(){ state.cvManual=true; update(); });
+  on('fxRate','input',onFxRateInput);
+  on('szOut','click',onSzOutClick);
+  on('mt5Toggle','click',toggleMt5);
+  on('mt5TickSize','input',renderMt5);
+  on('mt5TickValue','input',renderMt5);
+  on('mt5Out','click',function(e){ if(e.target && e.target.id==='mt5Use') useMt5Value(); });
   on('szEntry','input',update);
   on('szSL','input',update);
   on('szTP','input',update);
@@ -1154,6 +1388,7 @@ function init(){
   // Seed the default instrument's contract value on a fresh load;
   // loadState() supplies it when prior inputs exist.
   if(!loadState()) onInstrumentChange();
+  else fetchFxRate(crossBase(currentPreset())); // refresh the cross rate on restore
   update();
   registerServiceWorker();
 }

@@ -102,7 +102,14 @@ const pieces = [
   // getSizerRisk feeds calcSize (preset select vs. 'custom' free-text field);
   // it MUST be extracted or calcSize throws ReferenceError when evaluated.
   extractFn('getSizerRisk'),
-  extractFn('calcSize')
+  extractFn('calcSize'),
+  // Cross-rate + Yolo extras + MT5 check (pure / $-stub-backed).
+  extractFn('crossBase'),
+  extractVarLiteral('R_MULTIPLES', '[', ']'),
+  extractFn('priceDecimals'),
+  extractFn('rTargets'),
+  extractFn('twoStopPlan'),
+  extractFn('mt5CvCheck')
 ];
 
 // Mutable field map standing in for the DOM inputs/selects.
@@ -113,7 +120,8 @@ const $ = (id) => ({ value: id in fields ? fields[id] : '' });
 
 const factory = new Function('$', 'fields', `
   ${pieces.join('\n')}
-  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize };
+  return { PRESETS, FX_LOT, ACCOUNT_CCY, SHEET_COLUMNS, parseNum, contractValueFor, currentPreset, stepFor, roundVol, stepDecimals, getAccount, getSizerRisk, calcSize,
+           crossBase, R_MULTIPLES, priceDecimals, rTargets, twoStopPlan, mt5CvCheck };
 `);
 const M = factory($, fields);
 
@@ -124,6 +132,10 @@ const EURUSD = presetByName('EUR/USD');
 const USDJPY = presetByName('USD/JPY');
 const USDCAD = presetByName('USD/CAD');
 const EURGBP = presetByName('EUR/GBP');
+const EURJPY = presetByName('EUR/JPY');
+const GBPJPY = presetByName('GBP/JPY');
+const US100  = presetByName('US100 (NDX)');
+const ETHUSD = presetByName('ETH/USD');
 
 /* ---------- tiny assertion harness ---------- */
 
@@ -192,8 +204,32 @@ approx(M.contractValueFor(USDJPY, '150'), 100000 / 150, 1e-6, 'contractValueFor(
 eq(M.contractValueFor(EURUSD, '1.085'), 100000, 'contractValueFor(EUR/USD,"1.085") == 100000 (quote=USD → static)');
 // USD/CAD: USD is the base ⇒ exact entry-derive (the fix; previously mis-treated as static 100000).
 approx(M.contractValueFor(USDCAD, '1.37'), 100000 / 1.37, 1e-6, 'contractValueFor(USD/CAD,"1.37") == 100000/1.37');
-// EUR/GBP: USD is neither base nor quote ⇒ best-effort entry-derive (flagged approx in the UI).
-approx(M.contractValueFor(EURGBP, '0.85'), 100000 / 0.85, 1e-6, 'contractValueFor(EUR/GBP,"0.85") == 100000/0.85 (cross approx)');
+// 2b. True crosses (USD neither base nor quote): cv = FX_LOT/entry × BASE→USD rate. EXACT:
+//     quote→USD = baseUSD / price. Without the rate there is NO cv (NaN ⇒ no size), because
+//     the old FX_LOT/entry alone is in BASE currency and over-sized by the baseUSD factor.
+ok(!!EURJPY && !!GBPJPY, 'EUR/JPY and GBP/JPY presets must exist in PRESETS.ftmo');
+approx(M.contractValueFor(EURJPY, '170', '1.17'), 100000 / 170 * 1.17, 1e-6, 'EUR/JPY cv == 100000/170 × EURUSD 1.17');
+approx(M.contractValueFor(GBPJPY, '195', '1.30'), 100000 / 195 * 1.30, 1e-6, 'GBP/JPY cv == 100000/195 × GBPUSD 1.30');
+approx(M.contractValueFor(EURGBP, '0.85', '1.17'), 100000 / 0.85 * 1.17, 1e-6, 'EUR/GBP cv == 100000/0.85 × EURUSD 1.17');
+//     Cross-check the exact formula against an independent route: EUR/GBP pip value in USD
+//     = 100000 × GBPUSD, with GBPUSD = EURUSD / EURGBP.
+approx(M.contractValueFor(EURGBP, '0.85', '1.17'), 100000 * (1.17 / 0.85), 1e-6, 'EUR/GBP cv == 100000 × GBPUSD (independent route)');
+for (const [p, n] of [[EURJPY, 'EUR/JPY'], [GBPJPY, 'GBP/JPY'], [EURGBP, 'EUR/GBP']]) {
+  ok(Number.isNaN(M.contractValueFor(p, '170')), `${n} without base rate ⇒ NaN (no size instead of over-size)`);
+  ok(Number.isNaN(M.contractValueFor(p, '170', '')), `${n} with empty base rate ⇒ NaN`);
+  ok(Number.isNaN(M.contractValueFor(p, '170', '0')), `${n} with zero base rate ⇒ NaN`);
+  ok(Number.isNaN(M.contractValueFor(p, '', '1.17')), `${n} without entry ⇒ NaN`);
+}
+//     Comma decimal accepted for the rate (mobile keyboards).
+approx(M.contractValueFor(GBPJPY, '195', '1,30'), 100000 / 195 * 1.30, 1e-6, 'GBP/JPY rate "1,30" parsed as 1.30');
+//     The rate must NOT leak into non-cross pairs.
+approx(M.contractValueFor(USDJPY, '150', '1.17'), 100000 / 150, 1e-6, 'USD/JPY ignores a base rate (USD is base)');
+eq(M.contractValueFor(EURUSD, '1.085', '1.17'), 100000, 'EUR/USD ignores a base rate (quote=USD → static)');
+//     crossBase classifies exactly the three crosses.
+eq(M.crossBase(EURJPY), 'EUR', 'crossBase(EUR/JPY) == EUR');
+eq(M.crossBase(GBPJPY), 'GBP', 'crossBase(GBP/JPY) == GBP');
+eq(M.crossBase(EURGBP), 'EUR', 'crossBase(EUR/GBP) == EUR');
+for (const p of [EURUSD, USDJPY, USDCAD, US100, ETHUSD]) eq(M.crossBase(p), '', `crossBase(${p.s}) == '' (not a cross)`);
 
 // 3. Sizing of known trades via the REAL calcSize (account 100000, risk 0.25 => riskAmt 250).
 //    EUR/USD 1.08500 -> 1.08200, cv 100000 => vol ~= 0.8333.
@@ -252,6 +288,73 @@ setFields({ accPreset: '100000', szRisk: '0.25', szEntry: '1.10', szSL: '1.09', 
 r = M.calcSize();
 ok(r !== null && r.tpWrongSide === false, 'Long TP above entry is not wrong-side');
 approx(r.rr, 2, 1e-9, 'rr ~= 2 for TP 1.12 vs entry 1.10, stop 1.09');
+
+// 6. Cross sizing end to end via the REAL calcSize (account 100000, 1 % ⇒ riskAmt 1000).
+//    GBP/JPY 195.00 → 194.00, GBPUSD 1.30 ⇒ cv 666.67 ⇒ 1.50 lots (old approx gave 1.95).
+setFields({ brk: 'ftmo', inst: 'GBP/JPY', accPreset: '100000', szRisk: '1.00',
+  szEntry: '195.00', szSL: '194.00', szTP: '', cv: String(M.contractValueFor(GBPJPY, '195.00', '1.30')) });
+r = M.calcSize();
+approx(r.vol, 1.5, 1e-9, 'GBP/JPY 195→194, GBPUSD 1.30, 1 % of 100k ⇒ 1.50 lots');
+approx(M.roundVol(r.vol), 1.5, 1e-9, 'GBP/JPY rounded ⇒ 1.50 lots');
+//    EUR/JPY 170.00 → 169.00, EURUSD 1.17 ⇒ cv 688.24 ⇒ 1.453 ⇒ 1.45 lots.
+setFields({ brk: 'ftmo', inst: 'EUR/JPY', accPreset: '100000', szRisk: '1.00',
+  szEntry: '170.00', szSL: '169.00', szTP: '', cv: String(M.contractValueFor(EURJPY, '170.00', '1.17')) });
+r = M.calcSize();
+approx(M.roundVol(r.vol), 1.45, 1e-9, 'EUR/JPY 170→169, EURUSD 1.17, 1 % of 100k ⇒ 1.45 lots');
+//    Risk actually taken with that size, priced in USD, never exceeds the 1000 target.
+ok(M.roundVol(r.vol) * 1 * M.contractValueFor(EURJPY, '170.00', '1.17') <= 1000 + 1e-9, 'EUR/JPY rounded risk ≤ $1000');
+
+// 7. R targets — price ± m×dist in trade direction, P&L = vol×dist×cv×m.
+let t = M.rTargets(1.0850, 1.0830, 5, 100000);
+eq(t.map((x) => x.m).join(','), '1,2,3,5,10', 'R targets are 1/2/3/5/10R');
+approx(t[0].price, 1.0870, 1e-9, 'Long 1R target price 1.0870');
+approx(t[4].price, 1.1050, 1e-9, 'Long 10R target price 1.1050');
+approx(t[0].gain, 1000, 1e-6, 'Long 1R P&L $1000 at 5 lots');
+approx(t[3].gain, 5000, 1e-6, 'Long 5R P&L $5000');
+t = M.rTargets(195.00, 196.00, 1.5, 100000 / 195 * 1.30);
+approx(t[1].price, 193.00, 1e-9, 'Short 2R target price 193.00 (below entry)');
+approx(t[0].gain, 1000, 1e-6, 'Short GBP/JPY 1R P&L $1000 at 1.50 lots');
+t = M.rTargets(10, 15, 1, 1);
+eq(t[1].price, null, 'Short 2R target at/below zero ⇒ null');
+
+// 8. 2-stop plan (Yolo) — half out at 0.5R, rest at SL; size not scaled ⇒ 0.75R total.
+setFields({ brk: 'ftmo', inst: 'EUR/USD' });
+let ts = M.twoStopPlan(1.0850, 1.0830, 5, 100000);
+approx(ts.s1, 1.0840, 1e-9, '2-stop: stop 1 at 0.5R (1.0840) for a long');
+approx(ts.v1, 2.5, 1e-9, '2-stop: stop 1 takes 2.50 of 5.00 lots');
+approx(ts.v2, 2.5, 1e-9, '2-stop: stop 2 carries 2.50 lots');
+approx(ts.loss1, 250, 1e-6, '2-stop: −$250 at stop 1');
+approx(ts.loss2, 500, 1e-6, '2-stop: −$500 at stop 2');
+approx(ts.total, 750, 1e-6, '2-stop: total −$750');
+approx(ts.totalR, 0.75, 1e-9, '2-stop: total = 0.75R');
+ts = M.twoStopPlan(195.00, 196.00, 0.05, 1);
+approx(ts.s1, 195.50, 1e-9, '2-stop: stop 1 above entry for a short');
+approx(ts.v1, 0.02, 1e-9, '2-stop: odd 0.05 lots ⇒ stop 1 floors to 0.02');
+approx(ts.v2, 0.03, 1e-9, '2-stop: odd 0.05 lots ⇒ stop 2 carries 0.03');
+approx(ts.v1 + ts.v2, 0.05, 1e-9, '2-stop: split sums back to the full size');
+ts = M.twoStopPlan(1.0850, 1.0830, 0.01, 100000);
+eq(ts.v1, 0, '2-stop: single step cannot be split (stop 1 size 0)');
+
+// 9. priceDecimals — follows the typed entry, clamped 2..6.
+eq(M.priceDecimals('1.08500'), 5, 'priceDecimals("1.08500") == 5');
+eq(M.priceDecimals('195'), 2, 'priceDecimals("195") == 2 (min)');
+eq(M.priceDecimals('0,1234567'), 6, 'priceDecimals("0,1234567") == 6 (max, comma)');
+
+// 10. MT5 check — cv = Tick value / Tick size, ok within 1 %. Known FTMO specs.
+let c = M.mt5CvCheck('0.00001', '1', '100000');
+ok(c && c.ok, 'MT5 EUR/USD tick 0.00001 / value 1 ⇒ cv 100000 matches');
+approx(c.cvMt5, 100000, 1e-6, 'MT5 EUR/USD cvMt5 == 100000');
+c = M.mt5CvCheck('0.01', '0.01', String(US100.cv));
+ok(c && c.ok, 'MT5 US100 tick 0.01 / value 0.01 ⇒ cv 1 matches preset');
+c = M.mt5CvCheck('0.01', '0.01', String(ETHUSD.cv));
+ok(c && c.ok, 'MT5 ETH/USD tick 0.01 / value 0.01 ⇒ cv 1 matches preset');
+c = M.mt5CvCheck('0.01', '0.1', '1');
+ok(c && !c.ok, 'MT5 cv 10 vs QuickLog 1 ⇒ mismatch');
+approx(c.diffPct, -90, 1e-9, 'MT5 mismatch diff −90 %');
+ok(M.mt5CvCheck('0.01', '0.010099', '1').ok, 'MT5 within 1 % ⇒ ok');
+ok(!M.mt5CvCheck('0.01', '0.0102', '1').ok, 'MT5 2 % off ⇒ not ok');
+eq(M.mt5CvCheck('', '1', '1'), null, 'MT5 missing tick size ⇒ null');
+eq(M.mt5CvCheck('0', '1', '1'), null, 'MT5 zero tick size ⇒ null');
 
 /* =================== SUMMARY =================== */
 

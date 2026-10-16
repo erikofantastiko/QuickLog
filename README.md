@@ -27,7 +27,7 @@ service worker register without fallbacks. On mobile, "Install" / "Add to Home S
 like a native app (dark status bar, full-screen, launches offline). Opening `index.html` via `file://`
 also still works — the service worker is skipped there.
 
-The service worker (`sw.js`) precaches the app shell (`quicklog-v1`) so the core (Sizer + Log + PNG)
+The service worker (`sw.js`) precaches the app shell (`quicklog-v2`) so the core (Sizer + Log + PNG)
 loads and runs offline. The TradingView chart and any price feeds stay online-only (cross-origin
 requests are passed straight through and never cached).
 
@@ -38,8 +38,9 @@ official FTMO spec sheet. Formula used: `CV = Risk$ / (Lot × SL-distance)`.
 
 | Instrument | CV (per 1.0 price move, per lot) | Source |
 |---|---|---|
-| EUR/USD, GBP/USD, EUR/GBP, AUD/USD, USD/CAD | 100,000 | standard lot |
-| USD/JPY (+ JPY crosses) | 100,000 ÷ entry price (auto-derived) | standard lot, exact |
+| EUR/USD, GBP/USD, AUD/USD | 100,000 | standard lot |
+| USD/JPY, USD/CAD | 100,000 ÷ entry price (auto-derived) | standard lot, exact |
+| EUR/JPY, GBP/JPY, EUR/GBP (crosses) | 100,000 ÷ entry × BASE→USD rate | standard lot, exact |
 | US100 (NDX) | 1 | logged FTMO trades + $1/point confirmation |
 | US500 (SPX) | 1 | FTMO CFD logic, analogous to US100 |
 | XAU/USD | 100 | 1 lot = 100 oz |
@@ -55,6 +56,22 @@ as `100,000 ÷ entry price` whenever an entry is filled (P&L per 1.0 move is `10
 $100,000). The Contract Value field shows the derived number and stays editable — typing into it turns
 the auto-derive off (manual override). If a JPY pair is selected without an entry, the result waits
 rather than sizing off a stale value.
+
+**Cross pairs without USD** (EUR/JPY, GBP/JPY, EUR/GBP) need the base currency's USD rate:
+`CV = 100,000 ÷ entry × EURUSD` (or GBPUSD for GBP/JPY). The rate is fetched keyless from Kraken's
+public ticker and shown in the "EUR→USD rate" field; you can type your own (pinned as manual, clear
+the field to auto-fetch again). Without a rate the sizer shows **no size** on purpose: the old
+`100,000 ÷ entry` alone is in the base currency and over-sized these pairs by ~17 % (EUR) to ~30 % (GBP).
+
+**MT5 check.** Under Contract Value, "MT5 check" takes Tick size and Tick value from MT5
+(Market Watch → right-click → Specification). `CV = Tick value ÷ Tick size`. Within 1 % of the
+current CV the instrument is marked "✓ MT5 verified <date>" (stored locally); otherwise you get the
+difference and a "Use MT5 value" button that sets it as manual override. Expected FTMO values:
+EUR/USD 0.00001 / 1 → 100,000 · US100 0.01 / 0.01 → 1 · ETH/USD 0.01 / 0.01 → 1.
+
+**R targets & 2-stop plan.** The sizer result lists price and $ P&L at 1/2/3/5/10R (with the
+rounded size). A 2-stop plan (half out at 0.5R, rest at the SL → total loss 0.75R; size is not
+scaled up) can be shown with "2-Stop plan"; it is hidden by default. Both are display only.
 
 **Breakout** is crypto-only (since Feb 2024), perpetuals, Kraken-backed feeds. Sizing is in coins:
 `coins = Risk$ / |Entry − SL|` (CV = 1). No FX/indices/metals on Breakout.
