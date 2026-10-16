@@ -40,7 +40,7 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   Ergebnis. Nebenbei: cv-Feld auf 8 dp, vorher floorte z. B. USD/JPY 150→149 bei 1 % auf 1.49 statt
   1.50. Übernommen von Yolo: R-Ziele + 2-Stop-Plan (ausgeblendet). MT5-Abgleich über Kontraktgröße/Profit-Währung/
   Volumenschritt (MT5-iOS zeigt keine Tick-Werte) mit „verified“-Haken; EUR/USD per Screenshot im Code
-  verifiziert. Tests 55→136, neuer Browser-Test `test/ui.test.mjs` (63). SW-Cache v2.
+  verifiziert. Tests 55→137, neuer Browser-Test `test/ui.test.mjs` (63). SW-Cache v2.
 
 ## Backlog (priorisiert)
 
@@ -115,7 +115,8 @@ importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Fra
   große Lots**, jetzt cv 10. Max-Volumen-Warnung ergänzt.
 - BTC/USD: MT5-Screenshot 2026-10-16, Kontraktgröße 1, Profit USD ⇒ cv 1 korrekt.
 - XAU/USD (Kontraktgröße 100) und XAG/USD (5 000), Profit USD: MT5-Screenshot 2026-10-16 ⇒ korrekt.
-- **Noch nicht gegen MT5 geprüft:** US500, GBP/USD, AUD/USD, JPY-Paare, USD/CAD. Prüfen per „MT5 check“ oder Screenshot.
+- US500.cash: MT5-Screenshot 2026-10-16, Kontraktgröße 1, Profit USD, Schritt 0.01, max 1000 ⇒ korrekt.
+- **Noch nicht gegen MT5 geprüft:** GBP/USD, AUD/USD, JPY-Paare, USD/CAD. Prüfen per „MT5 check“ oder Screenshot.
 - **Offene Frage Kommission:** FTMO EUR/USD laut MT5 2.5 USD pro Lot je Seite (Ein-/Ausgang), also
   5 USD/Lot round trip. Der Sizer rechnet ohne Kommission ⇒ echter Verlust am SL liegt leicht über dem
   Ziel (bei 5 Pip SL ≈ +1 %, bei 20 Pip ≈ +0,25 %). Option: `vol = riskAmt / (dist×cv + comm)`.

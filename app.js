@@ -29,7 +29,8 @@ var PRESETS = {
     {s:'USD/CAD',base:'USD',quote:'CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ CAD price)',tv:'OANDA:USDCAD'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — US100.cash Kontraktgröße 1, Profit USD, step 0.01, commission 0.
     {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,max:1000,hint:'$1 / point / lot',tv:'OANDA:NAS100USD',mt5:'2026-10-16'},
-    {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,hint:'≈ $1 / point / lot',tv:'OANDA:SPX500USD'},
+    // mt5: FTMO MT5 screenshot 2026-10-16 — US500.cash Kontraktgröße 1, Profit USD, step 0.01, max 1000.
+    {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,max:1000,hint:'$1 / point / lot',tv:'OANDA:SPX500USD',mt5:'2026-10-16'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — XAUUSD Kontraktgröße 100, Profit USD.
     {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD',mt5:'2026-10-16'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — XAGUSD Kontraktgröße 5 000, Profit USD.

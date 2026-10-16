@@ -42,7 +42,7 @@ official FTMO spec sheet. Formula used: `CV = Risk$ / (Lot × SL-distance)`.
 | USD/JPY, USD/CAD | 100,000 ÷ entry price (auto-derived) | standard lot, exact |
 | EUR/JPY, GBP/JPY, EUR/GBP (crosses) | 100,000 ÷ entry × BASE→USD rate | standard lot, exact |
 | US100 (NDX) | 1 | FTMO MT5: US100.cash contract size 1, profit USD |
-| US500 (SPX) | 1 | FTMO CFD logic, analogous to US100 |
+| US500 (SPX) | 1 | FTMO MT5: US500.cash contract size 1, profit USD |
 | XAU/USD | 100 | FTMO MT5: contract size 100 oz (checked 2026-10-16) |
 | XAG/USD | 5000 | FTMO MT5: contract size 5 000 oz (checked 2026-10-16) |
 | BTC/USD | 1 | FTMO MT5: contract size 1 (checked 2026-10-16) |
