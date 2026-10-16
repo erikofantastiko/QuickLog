@@ -16,12 +16,15 @@ Schema: **Discover → Plan → Execute → Verify → Iterate**.
 
 ## Verifier-Orakel (objektive Gates aus [../CLAUDE.md](../CLAUDE.md))
 
-1. **Sheet-Parität** — `copyForSheet`/`SHEET_COLUMNS` byte-identisch, Spalten Live 23 / Backtest 28.
-2. **Sizing-Mathematik** — `vol = riskAmt/(dist×cv)`, JPY `cv = 100000/entry` — unverändert, außer das
-   Item ändert sie bewusst.
-3. **Syntax** — `node --check` auf das aus `index.html` extrahierte Script.
-4. **Scope** — Diff ändert nur, was das Item verlangt (Persistenz/Chart/Sizing sonst unangetastet).
-5. **Item-spezifische Akzeptanzkriterien** (im Plan der Iteration definiert).
+1. **Sheet-Parität** — `SHEET_COLUMNS` byte-identisch, Spalten Live 23 / Backtest 28, Formelspalten
+   M/N/O/P immer `''`.
+2. **Sizing-Mathematik** — `vol = riskAmt/(dist×cv)`, `contractValueFor` (`ACCOUNT_CCY`, `FX_LOT`) —
+   unverändert, außer das Item ändert sie bewusst.
+3. **Syntax** — `node --check app.js` (+ `sw.js`, falls berührt).
+4. **Tests** — `node test/sizing.test.mjs` grün, Assertion-Anzahl steigt nur; CI
+   (`.github/workflows/test.yml`) fährt dasselbe auf jedem Push/PR.
+5. **Scope** — Diff ändert nur, was das Item verlangt (Persistenz/Chart/Sizing sonst unangetastet).
+6. **Item-spezifische Akzeptanzkriterien** (im Plan der Iteration definiert).
 
 ## Loop ausführen (manuell, in Claude Code)
 

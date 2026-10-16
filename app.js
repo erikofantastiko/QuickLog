@@ -9,6 +9,10 @@
 
 var $ = function(id){ return document.getElementById(id); };
 
+// Release version. Shown in the footer and passed to the service worker as
+// './sw.js?v=…' — bumping it here is the ONE place that rolls the offline cache.
+var APP_VERSION = '1.1.0';
+
 /* ---------- Constants ---------- */
 
 // Instrument presets per broker.
@@ -18,44 +22,50 @@ var $ = function(id){ return document.getElementById(id); };
 // (USD is the base, e.g. USD/JPY, USD/CAD), a flagged cross-rate approximation otherwise.
 var PRESETS = {
   ftmo:[
-    // mt5: verified against Erik's FTMO MT5 Specification (Kontraktgröße 100 000 EUR, Profit USD, step 0.01).
-    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',max:50,tv:'OANDA:EURUSD',mt5:'2026-10-16'},
-    {s:'GBP/USD',base:'GBP',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:GBPUSD'},
-    {s:'USD/JPY',base:'USD',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:USDJPY'},
-    {s:'EUR/JPY',base:'EUR',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:EURJPY'},
-    {s:'GBP/JPY',base:'GBP',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',tv:'OANDA:GBPJPY'},
-    {s:'EUR/GBP',base:'EUR',quote:'GBP',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:EURGBP'},
-    {s:'AUD/USD',base:'AUD',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',tv:'OANDA:AUDUSD'},
-    {s:'USD/CAD',base:'USD',quote:'CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ CAD price)',tv:'OANDA:USDCAD'},
+    // mt5: FTMO MT5 screenshot 2026-10-16 — EURUSD Kontraktgröße 100 000 EUR, Profit USD, step 0.01, max 50.
+    {s:'EUR/USD',base:'EUR',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',max:50,band:[0.5,2],maxLev:100,tv:'OANDA:EURUSD',mt5:'2026-10-16'},
+    {s:'GBP/USD',base:'GBP',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.6,2.5],maxLev:100,tv:'OANDA:GBPUSD'},
+    {s:'USD/JPY',base:'USD',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[50,300],maxLev:100,tv:'OANDA:USDJPY'},
+    {s:'EUR/JPY',base:'EUR',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[50,300],maxLev:100,tv:'OANDA:EURJPY'},
+    {s:'GBP/JPY',base:'GBP',quote:'JPY',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ JPY price)',band:[80,400],maxLev:100,tv:'OANDA:GBPJPY'},
+    {s:'EUR/GBP',base:'EUR',quote:'GBP',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.5,1.5],maxLev:100,tv:'OANDA:EURGBP'},
+    {s:'AUD/USD',base:'AUD',quote:'USD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units',band:[0.3,1.5],maxLev:100,tv:'OANDA:AUDUSD'},
+    {s:'USD/CAD',base:'USD',quote:'CAD',cv:100000,unit:'lots',step:0.01,hint:'1 lot = 100,000 units (÷ CAD price)',band:[0.8,2],maxLev:100,tv:'OANDA:USDCAD'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — US100.cash Kontraktgröße 1, Profit USD, step 0.01, commission 0.
-    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,max:1000,hint:'$1 / point / lot',tv:'OANDA:NAS100USD',mt5:'2026-10-16'},
+    {s:'US100 (NDX)',cv:1,unit:'lots',step:0.01,max:1000,hint:'$1 / point / lot',band:[2000,100000],maxLev:50,tv:'OANDA:NAS100USD',mt5:'2026-10-16'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — US500.cash Kontraktgröße 1, Profit USD, step 0.01, max 1000.
-    {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,max:1000,hint:'$1 / point / lot',tv:'OANDA:SPX500USD',mt5:'2026-10-16'},
+    {s:'US500 (SPX)',cv:1,unit:'lots',step:0.01,max:1000,hint:'$1 / point / lot',band:[1000,30000],maxLev:50,tv:'OANDA:SPX500USD',mt5:'2026-10-16'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — XAUUSD Kontraktgröße 100, Profit USD.
-    {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',tv:'OANDA:XAUUSD',mt5:'2026-10-16'},
+    {s:'XAU/USD',cv:100,unit:'lots',step:0.01,hint:'1 lot = 100 oz → $100 / $1 move',band:[500,20000],maxLev:50,tv:'OANDA:XAUUSD',mt5:'2026-10-16'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — XAGUSD Kontraktgröße 5 000, Profit USD.
-    {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',tv:'OANDA:XAGUSD',mt5:'2026-10-16'},
+    {s:'XAG/USD',cv:5000,unit:'lots',step:0.01,hint:'1 lot = 5000 oz → $5000 / $1 move',band:[5,500],maxLev:50,tv:'OANDA:XAGUSD',mt5:'2026-10-16'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — Kontraktgröße 1 (1 lot = 1 BTC), Profit USD. Max volume not captured.
-    {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'1 lot = 1 BTC → $1 / $1 move',tv:'BITSTAMP:BTCUSD',mt5:'2026-10-16'},
-    // mt5: checked by Erik in MT5 2026-10-16 (no screenshot) — contract size 1, profit USD.
+    {s:'BTC/USD',cv:1,unit:'lots',step:0.01,hint:'1 lot = 1 BTC → $1 / $1 move',band:[1000,10000000],maxLev:3.3,tv:'BITSTAMP:BTCUSD',mt5:'2026-10-16'},
     // mt5: FTMO MT5 screenshot 2026-10-16 — Kontraktgröße 10 (NOT 1: 1 lot = 10 ETH), Profit USD, step 0.01,
     // max 5 lots, commission 0.0325 % per side. Was cv 1 before ⇒ sizes were 10× too large.
-    {s:'ETH/USD',cv:10,unit:'lots',step:0.01,max:5,hint:'1 lot = 10 ETH → $10 / $1 move',tv:'BITSTAMP:ETHUSD',mt5:'2026-10-16'},
+    {s:'ETH/USD',cv:10,unit:'lots',step:0.01,max:5,hint:'1 lot = 10 ETH → $10 / $1 move',band:[100,100000],maxLev:3.3,tv:'BITSTAMP:ETHUSD',mt5:'2026-10-16'},
     {s:'Custom…',cv:'',unit:'lots',step:0.01,hint:'enter contract value manually',tv:''}
   ],
   breakout:[
-    {s:'BTC',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:BTCUSD'},
-    {s:'ETH',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:ETHUSD'},
-    {s:'SOL',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:SOLUSD'},
-    {s:'XRP',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:XRPUSD'},
-    {s:'ADA',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:ADAUSD'},
-    {s:'AVAX',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:AVAXUSD'},
-    {s:'LINK',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:LINKUSD'},
-    {s:'DOGE',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',tv:'KRAKEN:DOGEUSD'},
+    {s:'BTC',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1000,10000000],maxLev:10,tv:'KRAKEN:BTCUSD'},
+    {s:'ETH',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[100,100000],maxLev:5,tv:'KRAKEN:ETHUSD'},
+    {s:'SOL',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1,5000],maxLev:5,tv:'KRAKEN:SOLUSD'},
+    {s:'XRP',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.05,100],maxLev:5,tv:'KRAKEN:XRPUSD'},
+    {s:'ADA',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.01,50],maxLev:5,tv:'KRAKEN:ADAUSD'},
+    {s:'AVAX',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[1,1000],maxLev:5,tv:'KRAKEN:AVAXUSD'},
+    {s:'LINK',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.5,1000],maxLev:5,tv:'KRAKEN:LINKUSD'},
+    {s:'DOGE',cv:1,unit:'coins',step:0.001,hint:'size in coins · Risk$ ÷ SL-dist',band:[0.001,10],maxLev:5,tv:'KRAKEN:DOGEUSD'},
     {s:'Custom…',cv:1,unit:'coins',step:0.001,hint:'perp · size in coins',tv:''}
   ],
   custom:[{s:'Custom',cv:'',unit:'units',step:0.01,hint:'enter contract value manually',tv:''}]
 };
+
+// maxLev = broker's max account leverage for the instrument class (1:N), used
+// only for the plausibility warning, never for the size itself. ASSUMPTION per
+// web research 2026-10 (FTMO Standard account: FX 1:100, metals 1:50 since the
+// Feb/May 2026 updates, indices 1:50, crypto 1:3.3 — Swing accounts are lower;
+// Breakout: BTC 10x, ETH + listed alts 5x per program rules 29 Jul 2026).
+// Verify in MT5 / broker terms; custom instruments have none (no check).
 
 // FX standard lot notional — basis for entry-derived cv.
 var FX_LOT = 100000;
@@ -109,7 +119,39 @@ var state = {
 
 /* ---------- Utils ---------- */
 
-function parseNum(v){ return parseFloat(String(v).replace(',','.')); }
+// Parse a user-typed number. Never guesses silently: anything it can't read
+// unambiguously is NaN, which the callers treat as "no result" (no mis-sizing).
+//   '.' or ',' as decimal; spaces/apostrophes as thousands, grouped by 3
+//   ('1 234,5', "1'234.5"); anything else with a space ('20150 20100') → NaN.
+//   Both '.' and ',' → the LAST one is the decimal, the other must group by 3
+//   ('20,150.5', '1.234,5'). Several ',' only → thousands ('1,234,567').
+//   A lone ',' + exactly 3 digits ('20,150', '1,085') is AMBIGUOUS (20150 or 20.15):
+//   resolved by `band` [min,max] (the instrument's plausible price range) when
+//   exactly one reading falls inside it, else NaN. Garbage ('1.2.3', '20abc') → NaN.
+function parseNum(v, band){
+  var s=String(v==null?'':v).trim();
+  if(!s) return NaN;
+  if(/[\s'\u00a0\u202f]/.test(s)){
+    if(!/^[+-]?\d{1,3}([\s'\u00a0\u202f]\d{3})+([.,]\d+)?$/.test(s)) return NaN;
+    s=s.replace(/[\s'\u00a0\u202f]/g,'');
+  }
+  var dot=s.lastIndexOf('.'), com=s.lastIndexOf(',');
+  if(dot>=0 && com>=0){
+    if(com>dot){ if(!/^[+-]?\d{1,3}(\.\d{3})+,\d+$/.test(s)) return NaN; s=s.replace(/\./g,'').replace(',','.'); }
+    else       { if(!/^[+-]?\d{1,3}(,\d{3})+\.\d+$/.test(s)) return NaN; s=s.replace(/,/g,''); }
+  } else if(com>=0){
+    if(s.indexOf(',')!==com){ if(!/^[+-]?\d{1,3}(,\d{3})+$/.test(s)) return NaN; s=s.replace(/,/g,''); }
+    else if(/^[+-]?[1-9]\d{0,2},\d{3}$/.test(s)){
+      var asDec=Number(s.replace(',','.')), asThou=Number(s.replace(',',''));
+      var inB=function(x){ return !!band && x>=band[0] && x<=band[1]; };
+      if(inB(asDec)!==inB(asThou)) return inB(asDec)?asDec:asThou;
+      return NaN;
+    }
+    else s=s.replace(',','.');
+  }
+  if(!/^[+-]?(\d+\.?\d*|\.\d+)$/.test(s)) return NaN;
+  return Number(s);
+}
 function today(){ return new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}); }
 
 // Escape free user text before it goes into innerHTML (Preview + PNG share cardHtml).
@@ -149,6 +191,33 @@ function currentPreset(){
   return list.find(function(x){return x.s===name;});
 }
 
+// Preset matching a Trade Log asset string ('EUR/USD', 'US100', 'BTC'), across
+// all brokers — sendToLog writes the preset name upper-cased minus '(NDX)'.
+function presetForAsset(asset){
+  var a=String(asset||'').toUpperCase().replace(/\s*\(.*\)/,'').trim();
+  if(!a) return null;
+  var hit=null;
+  Object.keys(PRESETS).forEach(function(k){
+    PRESETS[k].forEach(function(p){
+      if(!hit && p.band && p.s.toUpperCase().replace(/\s*\(.*\)/,'').trim()===a) hit=p;
+    });
+  });
+  return hit;
+}
+
+// Plausible range per input, used ONLY to resolve an ambiguous '20,150'-style
+// number (see parseNum). Sizer prices → current preset; Log prices → preset of
+// the typed asset; account/risk → generic ranges; anything else → none (NaN).
+function bandFor(id){
+  if(id==='szEntry'||id==='szSL'||id==='szTP'){ var p=currentPreset(); return p&&p.band||null; }
+  if(id==='ent'||id==='slo'||id==='tpr'||id==='exi'){ var q=presetForAsset($('ast').value); return q?q.band:null; }
+  if(id==='accCustom') return [1000,1e9];
+  if(id==='szRiskCustom'||id==='rskCustom') return [0.001,100];
+  return null;
+}
+// Read an input by id through parseNum with its band.
+function numOf(id){ return parseNum($(id).value, bandFor(id)); }
+
 /* ---------- Sizer ---------- */
 
 // Tradeable volume step for the current instrument (lots/coins).
@@ -176,7 +245,7 @@ function stepDecimals(){ var st=String(stepFor()); var i=st.indexOf('.'); return
 function contractValueFor(preset, entryStr, baseRateStr){
   if(!preset) return NaN;
   if(preset.quote && preset.quote!==ACCOUNT_CCY){
-    var e=parseNum(entryStr);
+    var e=parseNum(entryStr, preset.band);
     if(isNaN(e)||e<=0) return NaN;
     if(preset.base===ACCOUNT_CCY) return FX_LOT/e;
     var b=parseNum(baseRateStr);
@@ -282,17 +351,17 @@ function onFxRateInput(){
 // Sizer risk %: 'custom' select value falls back to the free-text field,
 // mirroring getAccount()'s preset/custom split.
 function getSizerRisk(){
-  if($('szRisk').value==='custom') return parseNum($('szRiskCustom').value);
+  if($('szRisk').value==='custom') return numOf('szRiskCustom');
   return parseFloat($('szRisk').value);
 }
 
 function calcSize(){
   var acc=getAccount(),
       risk=getSizerRisk(),
-      e=parseNum($('szEntry').value),
-      s=parseNum($('szSL').value),
-      t=parseNum($('szTP').value),
-      cv=parseNum($('cv').value);
+      e=numOf('szEntry'),
+      s=numOf('szSL'),
+      t=numOf('szTP'),
+      cv=numOf('cv');
   if(isNaN(acc)||isNaN(risk)||isNaN(e)||isNaN(s)||isNaN(cv)||e===s||cv<=0) return null;
   var riskAmt=acc*(risk/100);
   var dist=Math.abs(e-s);
@@ -308,18 +377,51 @@ function calcSize(){
   return {riskAmt:riskAmt,dist:dist,vol:vol,rr:rr,rewardAmt:rewardAmt,tpWrongSide:tpWrongSide};
 }
 
+// Sizer price levels outside the instrument's plausible band — catches a dot used
+// as thousands separator ('20.150' on US100 = 20.15 → 1000× size) and other
+// decimal slips. Returns display labels of the offending levels.
+function outsideBand(levels, band){
+  if(!band) return [];
+  return levels.filter(function(l){ return !isNaN(l[1]) && (l[1]<band[0] || l[1]>band[1]); })
+               .map(function(l){ return l[0]+' '+l[1]; });
+}
+
+// ACCOUNT_CCY at risk for a given (already step-rounded) volume: vol × dist × cv.
+// After the floor in roundVol this is ≤ the target riskAmt.
+function riskForVol(vol, dist, cv){ return vol*dist*cv; }
+
+// Plausibility of a size, for warnings only (the size itself is untouched).
+// notional = vol × cv × entry is the ACCOUNT_CCY exposure for every preset kind:
+// quote=USD (cv=FX_LOT → lots×100k×price), derived cv (FX_LOT/entry → lots×100k; crosses ×BASE→USD),
+// indices/metals/crypto (cv per point → lots×cv×price). lev = notional / account.
+// tightSl: SL closer than 0.02 % of entry — typical of a mistyped level
+// (1.0849 for 1.0800) that sizes 10× too large.
+var TIGHT_SL_FRACTION = 0.0002;
+function sizeChecks(vol, entry, dist, cv, account, maxLev){
+  var lev = (account>0 && vol>0) ? (vol*cv*Math.abs(entry))/account : 0;
+  return {
+    lev: lev,
+    levOver: !!(maxLev>0 && lev>maxLev),
+    tightSl: !!(entry && dist/Math.abs(entry) < TIGHT_SL_FRACTION)
+  };
+}
+
 function renderSize(){
   syncContractValue();
   var p=currentPreset();
   var unit=p?p.unit:'lots';
   var r=calcSize();
   var out=$('szOut');
+  // Typed but unreadable/ambiguous numbers (parseNum → NaN) get named, so a
+  // field never just silently drops out of the calculation.
+  var bad=unreadableSizerFields();
+  var badWarn = bad.length ? '<div class="sz-warn">Can\'t read '+bad.map(esc).join(', ')+' — ambiguous or invalid number. Use a dot for decimals, no thousands commas (e.g. 20150 or 20.15)</div>' : '';
   if(!r){
     var base=crossBase(p);
-    var msg = (base && !state.cvManual && !fxRateFor(base) && !isNaN(parseNum($('szEntry').value)))
+    var msg = (base && !state.cvManual && !fxRateFor(base) && !isNaN(numOf('szEntry')))
       ? 'Enter the '+base+'→'+ACCOUNT_CCY+' rate above — without it '+esc(p.s)+' would be over-sized'
       : 'Enter account, entry, stop &amp; contract value';
-    out.innerHTML='<div style="color:var(--tx3);text-align:center;padding:8px">'+msg+'</div>';
+    out.innerHTML=badWarn||('<div style="color:var(--tx3);text-align:center;padding:8px">'+msg+'</div>');
     return;
   }
   // Floor the raw volume to the tradeable step before display/transfer; raw
@@ -329,16 +431,25 @@ function renderSize(){
   // then wrong-side TP (no R:R shown), then advisory R:R<1. Wrong-side wins
   // over R:R<1 because rr is null when the TP sits on the wrong side.
   var warn = '';
+  var oob=outsideBand([['Entry',numOf('szEntry')],['SL',numOf('szSL')],['TP',numOf('szTP')]], p&&p.band);
+  if(oob.length) warn += '<div class="sz-warn">'+esc(oob.join(', '))+' outside the usual '+esc(p.s)+' range ('+p.band[0]+'–'+p.band[1]+') — check the decimal point</div>';
   if(r.vol<=0){
-    warn = '<div class="sz-warn">Invalid size — check inputs</div>';
+    warn += '<div class="sz-warn">Invalid size — check inputs</div>';
   } else if(rv<=0){
-    warn = '<div class="sz-warn">Below minimum size (step '+st+') — increase risk or account</div>';
+    warn += '<div class="sz-warn">Below minimum size (step '+st+') — increase risk or account</div>';
   } else if(p && p.max && rv>p.max+1e-9){
-    warn = '<div class="sz-warn">Above MT5 max volume ('+p.max+' '+unit+' per order) — MT5 rejects this; reduce risk or split the order</div>';
+    warn += '<div class="sz-warn">Above MT5 max volume ('+p.max+' '+unit+' per order) — MT5 rejects this; reduce risk or split the order</div>';
   } else if(r.tpWrongSide){
-    warn = '<div class="sz-warn">Take Profit on wrong side for this entry/stop — check direction</div>';
+    warn += '<div class="sz-warn">Take Profit on wrong side for this entry/stop — check direction</div>';
   } else if(r.rr!=null && r.rr<1){
-    warn = '<div class="sz-warn soft">R:R below 1 — reward smaller than risk</div>';
+    warn += '<div class="sz-warn soft">R:R below 1 — reward smaller than risk</div>';
+  }
+  // Plausibility (independent of the warnings above): leverage beyond the
+  // broker max, or a suspiciously tight stop. Advisory — the size stays as is.
+  if(rv>0){
+    var chk=sizeChecks(rv, numOf('szEntry'), r.dist, numOf('cv'), getAccount(), p&&p.maxLev);
+    if(chk.levOver) warn += '<div class="sz-warn">Needs ~1:'+Math.ceil(chk.lev)+' leverage — above broker max 1:'+p.maxLev+'. Check SL / size</div>';
+    if(chk.tightSl) warn += '<div class="sz-warn">SL only '+(r.dist/Math.abs(numOf('szEntry'))*100).toFixed(3)+'% from entry — typo?</div>';
   }
   out.innerHTML=
     '<div class="sz-big"><div><span class="sz-vol">'+rv.toFixed(stepDecimals())+'</span><span class="sz-unit">'+unit+' · step '+st+'</span></div>'
@@ -347,8 +458,22 @@ function renderSize(){
     +'<div class="sz-cell"><div class="cpl">Risk</div><div class="cpv">$'+r.riskAmt.toFixed(0)+'</div></div>'
     +'<div class="sz-cell"><div class="cpl">SL Distance</div><div class="cpv">'+r.dist.toFixed(5).replace(/0+$/,'').replace(/\.$/,'')+'</div></div>'
     +'<div class="sz-cell"><div class="cpl">Reward</div><div class="cpv">'+(r.rewardAmt?'$'+r.rewardAmt.toFixed(0):'—')+'</div></div>'
-    +'</div>'+warn
+    +'</div>'+badWarn+warn
     +(rv>0 ? sizerExtrasHtml(r, rv) : '');
+}
+
+// Sizer inputs that hold text but don't parse (parseNum → NaN), as display
+// names with the raw value. Custom account/risk only count when selected.
+function unreadableSizerFields(){
+  var defs=[['szEntry','Entry'],['szSL','Stop Loss'],['szTP','Take Profit'],['cv','Contract Value']];
+  if($('accPreset').value==='custom') defs.unshift(['accCustom','Account']);
+  if($('szRisk').value==='custom') defs.unshift(['szRiskCustom','Risk %']);
+  var out=[];
+  defs.forEach(function(d){
+    var raw=$(d[0]).value.trim();
+    if(raw && isNaN(parseNum(raw, bandFor(d[0])))) out.push(d[1]+' "'+raw+'"');
+  });
+  return out;
 }
 
 /* ---------- Sizer extras: R targets + 2-stop plan (Yolo-style, display only) ---------- */
@@ -385,7 +510,7 @@ function twoStopPlan(e, s, vol, cv){
 }
 
 function sizerExtrasHtml(r, rv){
-  var e=parseNum($('szEntry').value), s=parseNum($('szSL').value), cv=parseNum($('cv').value);
+  var e=numOf('szEntry'), s=numOf('szSL'), cv=numOf('cv');
   var pd=priceDecimals($('szEntry').value), vd=stepDecimals();
   function money(v){ return '$'+Math.round(v).toLocaleString('en-US'); }
   var h='<div class="sz-x">';
@@ -506,17 +631,21 @@ function useMt5Value(){
 
 function getAccount(){
   var v=$('accPreset').value;
-  if(v==='custom') return parseNum($('accCustom').value)||0;
+  if(v==='custom') return numOf('accCustom')||0;
   return parseFloat(v);
 }
 
 // Log risk %: 'custom' select value falls back to the free-text field. Returns
 // the bare value (no '%') — copyForSheet/cardHtml append the unit. The sheet
 // column ORDER is unchanged; only the value source switches for custom.
+// Empty/unreadable custom value → '' (empty cell / '—'), never 'NaN%'.
 function getLogRisk(){
-  if($('rsk').value==='custom') return parseNum($('rskCustom').value);
+  if($('rsk').value==='custom'){ var v=numOf('rskCustom'); return isNaN(v)?'':v; }
   return $('rsk').value;
 }
+
+// Sheet column J: '0.25%', or an empty cell when the risk is unknown (never 'NaN%').
+function sheetRisk(r){ return r===''?'':r+'%'; }
 
 /* ---------- Log card (shared by live Preview + PNG export) ---------- */
 
@@ -542,8 +671,11 @@ function readCard(){
 }
 
 function logRR(){
-  var e=parseNum($('ent').value), s=parseNum($('slo').value), t=parseNum($('tpr').value);
-  if(isNaN(e)||isNaN(s)||isNaN(t)||s===e) return null;
+  var e=numOf('ent'), s=numOf('slo'), t=numOf('tpr');
+  if(isNaN(e)||isNaN(s)||isNaN(t)||s===e||t===e) return null;
+  // Same rule as calcSize: a TP on the wrong side of entry (e.g. Long with TP
+  // below entry) has no R:R — Math.abs alone would show a plausible positive one.
+  if(Math.sign(e-s)!==Math.sign(t-e)) return null;
   return (Math.abs(t-e)/Math.abs(e-s)).toFixed(2);
 }
 
@@ -574,7 +706,7 @@ function cardHtml(d){
     +'<div style="text-align:right"><span style="display:inline-block;padding:4px 12px;border-radius:10px;font-size:13px;font-weight:600;background:'+badgeBg+';color:'+badgeFg+'">'+badgeTx+'</span><div style="font-size:11px;color:#56565c;margin-top:6px">'+d.date+'</div></div></div>'
     +'<div style="height:1px;background:#2a2a2e;margin:14px 0"></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'+cell('Entry',esc(d.entry))+cell('Stop loss',esc(d.sl))+cell('Take profit',esc(d.tp))+'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+big('R:R',d.rr?d.rr+'R':'—',rrColor)+big('Risk',d.risk+'%','#e4e4e7')+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+big('R:R',d.rr?d.rr+'R':'—',rrColor)+big('Risk',d.risk===''?'—':d.risk+'%','#e4e4e7')+'</div>'
     +extrasRow
     +(d.note?'<div style="margin-top:12px;padding:10px 12px;background:#0c0c0e;border-radius:8px;font-size:13px;color:#8a8a90;font-style:italic">'+esc(d.note)+'</div>':'');
 }
@@ -589,7 +721,7 @@ function readSizer(){
   if(!r) return null;
   var p=currentPreset();
   var brkEl=$('brk'), brkLabel=(brkEl && brkEl.selectedIndex>=0) ? brkEl.options[brkEl.selectedIndex].text : brkEl.value;
-  var e=parseNum($('szEntry').value), s=parseNum($('szSL').value);
+  var e=numOf('szEntry'), s=numOf('szSL');
   return {
     instrument: $('inst').value||'—',
     broker:     brkLabel,
@@ -663,7 +795,7 @@ function copyForSheet(){
     sl:         $('slo').value,
     tp:         $('tpr').value,
     vol:        $('vol').value,
-    risk:       getLogRisk()+'%',
+    risk:       sheetRisk(getLogRisk()),
     riskUsd:    $('rskUsd').value,
     pnlUsd:     $('pnl').value,
     dir:        state.direction,
@@ -728,6 +860,13 @@ function exportPng(){
 
 // Transfer the Sizer result into the Trade Log fields.
 function sendToLog(){
+  // Trade fields the transfer doesn't overwrite (note, sheet extras). Filled ones
+  // belong to the previous trade — offer to clear them so they can't ride into
+  // this trade's sheet row. Cancel keeps them (e.g. re-sizing the same trade).
+  var leftovers=TRADE_FIELDS.filter(function(id){ return TRANSFER_FIELDS.indexOf(id)<0 && $(id) && $(id).value!==''; });
+  if(leftovers.length && window.confirm('The log still holds note / sheet extras from the previous trade. Clear them for this new trade?')){
+    leftovers.forEach(function(id){ $(id).value=''; });
+  }
   var r=calcSize();
   var instName=$('inst').value.replace(/\s*\(.*\)/,''); // strip "(NDX)"
   $('ast').value=instName.toUpperCase();
@@ -738,10 +877,35 @@ function sendToLog(){
   $('rsk').value=$('szRisk').value;
   if($('szRisk').value==='custom') $('rskCustom').value=$('szRiskCustom').value;
   $('rskCustomWrap').style.display=$('rsk').value==='custom'?'block':'none';
-  if(r) $('vol').value=roundVol(r.vol).toFixed(stepDecimals());
+  // Volume floored to the tradeable step, and the REAL risk of that volume
+  // (≤ target) into Sheet column K. No result → clear both, so the previous
+  // trade's numbers never ride along. Both stay editable.
+  var rv = r ? roundVol(r.vol) : 0;
+  $('vol').value    = r ? rv.toFixed(stepDecimals()) : '';
+  $('rskUsd').value = (r && rv>0) ? riskForVol(rv, r.dist, numOf('cv')).toFixed(2) : '';
+  // A transfer is a new trade: drop any Long/Short pin from the previous one and
+  // derive the direction from the transferred Entry/SL (fields were set without
+  // input events, so the auto-detect would otherwise never run).
+  state.dirManual=false;
+  maybeAutoDirection();
   setTab('log');
   update();
   toast('Sent to Trade Log ✓');
+}
+
+// Trade-specific Log fields. "New trade" clears exactly these, so last trade's
+// exit/result/PnL/emotions can't silently ride into the next sheet row. Kept on
+// purpose: mode, session, risk %, setup, backtest ID/pool (stable across trades).
+var TRADE_FIELDS = ['ast','ent','slo','tpr','vol','nte','shot','exi','rskUsd','pnl','res','mgmt','emo','fbk'];
+// The subset sendToLog writes itself (the rest are leftovers it offers to clear).
+var TRANSFER_FIELDS = ['ast','ent','slo','tpr','vol','rskUsd'];
+
+function newTrade(){
+  if(!window.confirm('Clear this trade (asset, levels, volume, note and sheet extras)?')) return;
+  TRADE_FIELDS.forEach(function(id){ var el=$(id); if(el) el.value=''; });
+  state.dirManual=false;
+  update();
+  toast('Cleared — ready for the next trade');
 }
 
 /* ---------- View switching ---------- */
@@ -774,7 +938,7 @@ function setDirection(d, manual){
 // Does NOT touch dirManual and does NOT call update() — the caller updates.
 function maybeAutoDirection(){
   if(state.dirManual) return;
-  var e=parseNum($('ent').value), s=parseNum($('slo').value);
+  var e=numOf('ent'), s=numOf('slo');
   if(isNaN(e)||isNaN(s)||e===s) return;
   var d=e>s?'Long':'Short';
   state.direction=d;
@@ -1191,7 +1355,7 @@ function applyCryptoLevels(){
   ];
   defs.forEach(function(d){
     var el=$(d.id); if(!el) return;
-    var v=parseNum(el.value);
+    var v=numOf(d.id);
     if(isNaN(v)) return;
     try{
       var line=l.series.createPriceLine({
@@ -1387,7 +1551,7 @@ function bind(){
   on('bb','click',function(){ setMode('backtest'); });
   on('btId','input',update);
   on('pl','input',update);
-  on('ast','input',function(){ this.value=this.value.toUpperCase(); state.dirManual=false; update(); });
+  on('ast','input',function(){ this.value=this.value.toUpperCase(); state.dirManual=false; maybeAutoDirection(); update(); });
   on('blo','click',function(){ setDirection('Long', true); });
   on('bsh','click',function(){ setDirection('Short', true); });
   on('ses','change',update);
@@ -1412,6 +1576,7 @@ function bind(){
   on('fbk','input',update);
   on('cpb','click',copyForSheet);
   on('exb','click',exportPng);
+  on('newTrade','click',newTrade);
 }
 
 /* ---------- Init ---------- */
@@ -1421,6 +1586,7 @@ function init(){
   // Restore the Twelve Data key from its OWN localStorage key (never via the
   // 'quicklog' form-state blob). Field is type=password so it isn't shoulder-read.
   var tk=$('tdKey'); if(tk) tk.value=tdKey();
+  var ver=$('appVer'); if(ver) ver.textContent='QuickLog v'+APP_VERSION;
   fillInstruments();
   // Seed the default instrument's contract value on a fresh load;
   // loadState() supplies it when prior inputs exist.
@@ -1434,7 +1600,7 @@ function init(){
 // file:// (double-click local use) where SW registration is unavailable.
 function registerServiceWorker(){
   if('serviceWorker' in navigator && location.protocol!=='file:'){
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
+    navigator.serviceWorker.register('./sw.js?v='+encodeURIComponent(APP_VERSION)).catch(function(){});
   }
 }
 

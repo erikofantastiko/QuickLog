@@ -27,7 +27,7 @@
 
   <div class="r2">
     <div class="fi">
-      <label>Broker</label>
+      <label for="brk">Broker</label>
       <select id="brk">
         <option value="ftmo">FTMO (MT5 CFD)</option>
         <option value="breakout">Breakout (Crypto Perps)</option>
@@ -35,7 +35,7 @@
       </select>
     </div>
     <div class="fi">
-      <label>Account Size</label>
+      <label for="accPreset">Account Size</label>
       <select id="accPreset">
         <option value="10000">10,000</option>
         <option value="25000">25,000</option>
@@ -48,17 +48,17 @@
   </div>
 
   <div class="fi" id="accCustomWrap" style="display:none">
-    <label>Custom Account Size</label>
-    <input type="text" id="accCustom" placeholder="100000">
+    <label for="accCustom">Custom Account Size</label>
+    <input type="text" inputmode="decimal" id="accCustom" placeholder="100000">
   </div>
 
   <div class="r2">
     <div class="fi">
-      <label>Instrument</label>
+      <label for="inst">Instrument</label>
       <select id="inst"></select>
     </div>
     <div class="fi">
-      <label>Risk %</label>
+      <label for="szRisk">Risk %</label>
       <select id="szRisk">
         <option value="0.10">0.10%</option>
         <option value="0.25" selected>0.25%</option>
@@ -70,26 +70,26 @@
   </div>
 
   <div class="fi" id="szRiskCustomWrap" style="display:none">
-    <label>Custom Risk %</label>
-    <input type="text" id="szRiskCustom" placeholder="0.33">
+    <label for="szRiskCustom">Custom Risk %</label>
+    <input type="text" inputmode="decimal" id="szRiskCustom" placeholder="0.33">
   </div>
 
   <div class="fi" id="cvWrap">
-    <label>Contract Value <span id="cvHint" style="text-transform:none;letter-spacing:0;color:var(--tx3)">(per 1.0 price move, per lot)</span></label>
-    <input type="text" id="cv" placeholder="1.0">
+    <label for="cv">Contract Value <span id="cvHint" style="text-transform:none;letter-spacing:0;color:var(--tx3)">(per 1.0 price move, per lot)</span></label>
+    <input type="text" inputmode="decimal" id="cv" placeholder="1.0">
     <div style="margin-top:8px"><button class="tf" id="mt5Toggle" type="button">MT5 check ▾</button></div>
     <div id="mt5Wrap" class="mt5" style="display:none">
       <div class="r3">
-        <div><label>Contract size</label><input type="text" id="mt5Cs" inputmode="decimal" placeholder="100000"></div>
-        <div><label>Profit ccy</label><input type="text" id="mt5Ccy" maxlength="3" placeholder="USD"></div>
-        <div><label>Vol. step</label><input type="text" id="mt5Step" inputmode="decimal" placeholder="0.01"></div>
+        <div><label for="mt5Cs">Contract size</label><input type="text" id="mt5Cs" inputmode="decimal" placeholder="100000"></div>
+        <div><label for="mt5Ccy">Profit ccy</label><input type="text" id="mt5Ccy" maxlength="3" placeholder="USD"></div>
+        <div><label for="mt5Step">Vol. step</label><input type="text" id="mt5Step" inputmode="decimal" placeholder="0.01"></div>
       </div>
       <div id="mt5Out"></div>
     </div>
   </div>
 
   <div class="fi" id="fxRateWrap" style="display:none">
-    <label><span id="fxRateLabel">EUR→USD rate</span> <span id="fxRateHint" style="text-transform:none;letter-spacing:0;color:var(--tx3)"></span></label>
+    <label for="fxRate"><span id="fxRateLabel">EUR→USD rate</span> <span id="fxRateHint" style="text-transform:none;letter-spacing:0;color:var(--tx3)"></span></label>
     <input type="text" id="fxRate" inputmode="decimal" placeholder="1.1700" style="font-family:var(--mn)">
   </div>
 
@@ -97,18 +97,18 @@
 
   <div class="r2">
     <div class="fi">
-      <label>Entry</label>
-      <input type="text" id="szEntry" placeholder="1.08500" style="font-family:var(--mn);font-size:18px">
+      <label for="szEntry">Entry</label>
+      <input type="text" inputmode="decimal" id="szEntry" placeholder="1.08500" style="font-family:var(--mn);font-size:18px">
     </div>
     <div class="fi">
-      <label>Stop Loss</label>
-      <input type="text" id="szSL" placeholder="1.08200" style="font-family:var(--mn);font-size:18px">
+      <label for="szSL">Stop Loss</label>
+      <input type="text" inputmode="decimal" id="szSL" placeholder="1.08200" style="font-family:var(--mn);font-size:18px">
     </div>
   </div>
 
   <div class="fi">
-    <label>Take Profit <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(optional, for R:R)</span></label>
-    <input type="text" id="szTP" placeholder="1.09500" style="font-family:var(--mn)">
+    <label for="szTP">Take Profit <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(optional, for R:R)</span></label>
+    <input type="text" inputmode="decimal" id="szTP" placeholder="1.09500" style="font-family:var(--mn)">
   </div>
 
   <div class="sl">Result</div>
@@ -120,14 +120,14 @@
 
   <div id="chartWrap" style="display:none;margin-bottom:24px">
     <div class="fi" style="margin-bottom:12px">
-      <label>Chart Feed <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(broker / futures — search inside chart too)</span></label>
+      <label for="feedInput">Chart Feed <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(broker / futures — search inside chart too)</span></label>
       <div style="display:flex;gap:8px">
         <input type="text" id="feedInput" placeholder="e.g. OANDA:NAS100USD, CME_MINI:NQ1!, KRAKEN:BTCUSD" style="font-family:var(--mn);font-size:14px">
         <button class="bt" id="feedLoad" style="flex:0 0 auto;padding:12px 16px">Load</button>
       </div>
     </div>
     <div class="fi" style="margin-bottom:12px">
-      <label>Twelve Data API key <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(FX / metals — real lines · stored locally only · <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener" style="color:var(--tx3)">free key</a>)</span></label>
+      <label for="tdKey">Twelve Data API key <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(FX / metals — real lines · stored locally only · <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener" style="color:var(--tx3)">free key</a>)</span></label>
       <input type="password" id="tdKey" placeholder="Twelve Data API key (FX/Metalle)" autocomplete="off" style="font-family:var(--mn);font-size:14px">
     </div>
     <div id="chartTf" style="display:none;gap:6px;margin-bottom:10px">
@@ -160,24 +160,24 @@
   <div id="btf" style="display:none">
     <div class="r2" style="margin-bottom:20px">
       <div class="fi" style="margin-bottom:0">
-        <label>BT-Session-ID</label>
+        <label for="btId">BT-Session-ID</label>
         <input type="text" id="btId" placeholder="BT-2026-01-NDX">
       </div>
       <div class="fi" style="margin-bottom:0">
-        <label>Pool</label>
+        <label for="pl">Pool</label>
         <input type="text" id="pl" placeholder="Jan 2023 – May 2026">
       </div>
     </div>
   </div>
 
   <div class="fi">
-    <label>Asset</label>
+    <label for="ast">Asset</label>
     <input type="text" id="ast" placeholder="EUR/USD" style="font-size:20px;font-weight:600;padding:14px">
   </div>
 
   <div class="fi">
-    <label>Direction</label>
-    <div class="dr">
+    <label id="dirLabel">Direction</label>
+    <div class="dr" role="group" aria-labelledby="dirLabel">
       <button class="db lo" id="blo">↑ Long</button>
       <button class="db" id="bsh">↓ Short</button>
     </div>
@@ -185,11 +185,11 @@
 
   <div class="r2">
     <div class="fi">
-      <label>Session</label>
+      <label for="ses">Session</label>
       <select id="ses"><option>London</option><option>NY</option><option>Asia</option></select>
     </div>
     <div class="fi">
-      <label>Risk %</label>
+      <label for="rsk">Risk %</label>
       <select id="rsk">
         <option value="0.10">0.10%</option><option value="0.25" selected>0.25%</option>
         <option value="0.50">0.50%</option><option value="1.00">1.00%</option>
@@ -199,37 +199,37 @@
   </div>
 
   <div class="fi" id="rskCustomWrap" style="display:none">
-    <label>Custom Risk %</label>
-    <input type="text" id="rskCustom" placeholder="0.33">
+    <label for="rskCustom">Custom Risk %</label>
+    <input type="text" inputmode="decimal" id="rskCustom" placeholder="0.33">
   </div>
 
   <div class="sp"></div>
 
   <div class="fi">
-    <label>Entry</label>
-    <input type="text" id="ent" placeholder="1.08500" style="font-family:var(--mn);font-size:18px">
+    <label for="ent">Entry</label>
+    <input type="text" inputmode="decimal" id="ent" placeholder="1.08500" style="font-family:var(--mn);font-size:18px">
   </div>
 
   <div class="r2">
     <div class="fi">
-      <label>Stop Loss</label>
-      <input type="text" id="slo" placeholder="1.08200" style="font-family:var(--mn)">
+      <label for="slo">Stop Loss</label>
+      <input type="text" inputmode="decimal" id="slo" placeholder="1.08200" style="font-family:var(--mn)">
     </div>
     <div class="fi">
-      <label>Take Profit</label>
-      <input type="text" id="tpr" placeholder="1.09500" style="font-family:var(--mn)">
+      <label for="tpr">Take Profit</label>
+      <input type="text" inputmode="decimal" id="tpr" placeholder="1.09500" style="font-family:var(--mn)">
     </div>
   </div>
 
   <div class="fi">
-    <label>Volume <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(lots / units)</span></label>
-    <input type="text" id="vol" placeholder="0.00" style="font-family:var(--mn)">
+    <label for="vol">Volume <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(lots / units)</span></label>
+    <input type="text" inputmode="decimal" id="vol" placeholder="0.00" style="font-family:var(--mn)">
   </div>
 
   <div class="sp"></div>
 
   <div class="fi">
-    <label>Setup</label>
+    <label for="stp">Setup</label>
     <select id="stp">
       <option>Asia Range</option><option>Monday Model</option>
       <option>EBP H4</option><option>EBP H1</option>
@@ -241,7 +241,7 @@
   </div>
 
   <div class="fi">
-    <label>Note</label>
+    <label for="nte">Note</label>
     <input type="text" id="nte" placeholder="H1 FVG after sweep, DXY divergence...">
   </div>
 
@@ -254,17 +254,17 @@
   <!-- Optional sheet columns (D/F/K/L/S/U/V/W). Empty fields copy as empty cells. -->
   <div id="extrasWrap" style="display:block;margin-top:20px">
     <div class="fi">
-      <label>Setup Screenshot <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(URL)</span></label>
+      <label for="shot">Setup Screenshot <span style="text-transform:none;letter-spacing:0;color:var(--tx3)">(URL)</span></label>
       <input type="text" id="shot" placeholder="https://www.tradingview.com/x/...">
     </div>
 
     <div class="r2">
       <div class="fi">
-        <label>Exit</label>
-        <input type="text" id="exi" placeholder="1.09500" style="font-family:var(--mn)">
+        <label for="exi">Exit</label>
+        <input type="text" inputmode="decimal" id="exi" placeholder="1.09500" style="font-family:var(--mn)">
       </div>
       <div class="fi">
-        <label>Ergebnis</label>
+        <label for="res">Ergebnis</label>
         <select id="res">
           <option value="">—</option><option>Win</option><option>Lose</option><option>Breakeven</option>
         </select>
@@ -273,27 +273,27 @@
 
     <div class="r2">
       <div class="fi">
-        <label>Risk in $</label>
-        <input type="text" id="rskUsd" placeholder="250" style="font-family:var(--mn)">
+        <label for="rskUsd">Risk in $</label>
+        <input type="text" inputmode="decimal" id="rskUsd" placeholder="250" style="font-family:var(--mn)">
       </div>
       <div class="fi">
-        <label>PnL ($)</label>
+        <label for="pnl">PnL ($)</label>
         <input type="text" id="pnl" placeholder="500" style="font-family:var(--mn)">
       </div>
     </div>
 
     <div class="fi">
-      <label>Trade Management</label>
+      <label for="mgmt">Trade Management</label>
       <input type="text" id="mgmt" placeholder="SL auf BE nach 1R, Teilverkauf...">
     </div>
 
     <div class="fi">
-      <label>Emotionen</label>
+      <label for="emo">Emotionen</label>
       <input type="text" id="emo" placeholder="Ruhig, kein FOMO...">
     </div>
 
     <div class="fi">
-      <label>Feedback</label>
+      <label for="fbk">Feedback</label>
       <input type="text" id="fbk" placeholder="Entry zu früh, auf Retest warten...">
     </div>
 
@@ -304,12 +304,16 @@
     <button class="bt bp" id="cpb">Copy for Sheet</button>
     <button class="bt" id="exb">PNG for X</button>
   </div>
+  <div class="ar">
+    <button class="bt" id="newTrade">New trade (clear fields)</button>
+  </div>
 
   <div class="sp"></div>
   <div class="sl">Preview</div>
   <div class="cd" id="prv"></div>
 </div>
 
+<div class="ver" id="appVer"></div>
 <div id="tst" class="tst"></div>
 </div>
 

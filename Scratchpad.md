@@ -33,6 +33,11 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
   statisch; sonst `FX_LOT/entry`, exakt bei Basis=USD (**USD/CAD-Fix**), sonst Cross-Approx mit
   sichtbarem „verify in MT5"-Hint. Keine Cross-Rate-Abfrage (keyless/offline bleibt). Test 25→29.
 
+- **1.0-Härtungslauf** (Branch `claude/quicklog-hardening`) — strenges Zahlenparsing mit
+  Preis-Bändern (`20,150` sized nicht mehr 1000× zu groß), Richtung bei Send-to-Log, Log-R:R-Seite,
+  kein `NaN%`, SW network-first + `APP_VERSION`, CI, Plausibilitätswarnungen (`maxLev`, enger SL),
+  Ziffernfeld, Label-`for`, Risk $ automatisch, „New trade", Band-Warnung, Altdaten-Abfrage bei
+  Send to Log. Tests 55→196. Verdicts in `loop/verdicts/hardening-*.md`.
 - **Cross-Rate exakt + Yolo-Extras + MT5-Abgleich** (2026-10-16) — Yolos Dashboard-Rechner geprüft:
   reiner Aktien-Stückzahlrechner ohne FX-Umrechnung, löst nichts am FX/CFD-Sizing. Dabei echtes Loch
   geschlossen: Crosses ohne USD (EUR/JPY, GBP/JPY, EUR/GBP) wurden mit `FX_LOT/entry` in Basiswährung
@@ -44,7 +49,7 @@ Laufende Notizen + priorisiertes Backlog. Projektkontext & Invarianten: [CLAUDE.
 
 ## Backlog (priorisiert)
 
-### P0 — PWA / Offline-Umstellung  ·  Status: ✅ umgesetzt (Branch loop/p0-pwa, Verifier ausstehend)  ·  Aufwand: M
+### P0 — PWA / Offline-Umstellung  ·  Status: ✅ merged → main (e1e149f)  ·  Aufwand: M
 **Warum:** Installierbar am Homescreen, sofortiger Load, Kern (Sizer + Log + PNG) läuft offline /
 CDN-unabhängig. Ein Service Worker kann nicht inline sein → erzwingt Multi-File (= einziger echter
 Grund, Single-File aufzugeben).
@@ -73,7 +78,7 @@ R:R < 1, Entry == SL, unplausibel große Risk-Distanz. Fängt Fat-Finger ab, bev
 **Warum:** `fmtVol` formatiert nur die Anzeige; 0.833 Lots ist nicht handelbar, wenn der Step 0.01 ist.
 `step` pro Instrument ins Preset, Volume auf handelbaren Step **abrunden** (Risk bleibt ≤ Ziel).
 
-### P2 — Trade-History-Liste  ·  Status: ✅ merged → main (cc43ca4)  ·  Aufwand: M–L
+### P2 — Trade-History-Liste  ·  Status: ⛔ wieder entfernt (50a3fef, bewusste Entscheidung — nicht neu bauen)  ·  Aufwand: M–L
 **Warum:** Größter funktionaler Hebel. Aktuell überlebt nur das *eine* offene Formular. Geloggte Trades
 als Liste in localStorage: „Log Trade" hängt an, darunter Liste zum Ansehen/Bearbeiten/Löschen/
 Re-Export. „Copy for Sheet" ist dann nicht mehr der einzige Persistenz-Ort.
@@ -95,7 +100,7 @@ unverändert.
 - ✅ Custom-Risk-Feld (Sizer + Log) — merged → main (361391b); Test 20→25.
 - ✅ Sizer-Karte als PNG/Copy — merged → main (89d1755); shared `exportNodePng`-Helper.
 
-### P3 — Preisfelder escapen (entry/sl/tp)  ·  Status: offen  ·  Aufwand: S
+### P3 — Preisfelder escapen (entry/sl/tp)  ·  Status: ✅ erledigt (35a1668)  ·  Aufwand: S
 **Warum:** `cardHtml` UND `sizerCardHtml` rendern `entry`/`sl`/`tp` ungeescaped via `innerHTML`
 (`cell()`). P1 escapte bewusst nur asset/note. Self-XSS/Render-Bruch bei `<`/`&` in einem Preisfeld.
 **How:** `esc()` auf die Preisfelder in BEIDEN Karten gemeinsam anwenden (vom Verifier in p3-sizer-png notiert).
@@ -117,10 +122,18 @@ importiert/prüft (bekannte Trades T66/67/68 + JPY). Läuft via `node`, kein Fra
 - XAU/USD (Kontraktgröße 100) und XAG/USD (5 000), Profit USD: MT5-Screenshot 2026-10-16 ⇒ korrekt.
 - US500.cash: MT5-Screenshot 2026-10-16, Kontraktgröße 1, Profit USD, Schritt 0.01, max 1000 ⇒ korrekt.
 - **Noch nicht gegen MT5 geprüft:** GBP/USD, AUD/USD, JPY-Paare, USD/CAD. Prüfen per „MT5 check“ oder Screenshot.
-- **Offene Frage Kommission:** FTMO EUR/USD laut MT5 2.5 USD pro Lot je Seite (Ein-/Ausgang), also
-  5 USD/Lot round trip. Der Sizer rechnet ohne Kommission ⇒ echter Verlust am SL liegt leicht über dem
-  Ziel (bei 5 Pip SL ≈ +1 %, bei 20 Pip ≈ +0,25 %). Option: `vol = riskAmt / (dist×cv + comm)`.
-  Ändert die Sizing-Invariante ⇒ nur mit Eriks Ja.
+- **Kommission bewusst NICHT im Sizing** (Eriks Entscheidung 2026-10-16). FTMO: EUR/USD 2.5 USD/Lot je
+  Seite, ETH 0.0325 % je Seite, US100/US500 0. Echter Verlust am SL liegt bei FX dadurch leicht über
+  dem Ziel (5 Pip SL ≈ +1 %, 20 Pip ≈ +0,25 %).
 - **Annahme:** Kraken liefert `Ticker?pair=EURUSD` / `GBPUSD` (Spot-FX, ZEURZUSD/ZGBPZUSD). Aus der
   Cloud-Session nicht erreichbar (Proxy), nur gemockt getestet. Einmal live prüfen; fällt es aus,
   bleibt das manuelle Feld.
+- **maxLev = Annahme** — FTMO-Werte gelten für Standard-Accounts; Swing ist niedriger (FX 1:30,
+  Metalle/Indizes 1:15, Krypto 1:1). Falls Swing genutzt wird: Werte im Preset senken.
+
+## Backlog nach 1.0 (Ideen, nicht beauftragt)
+
+- **Log-Felder „Can't read"-Hinweis** — der Sizer nennt unlesbare Zahlen, der Log nicht (Copy for
+  Sheet kopiert den Rohtext; das Sheet interpretiert ihn nach Locale). Aufwand S.
+- **Swing/Standard-Schalter** für `maxLev`, falls beide Kontotypen genutzt werden. Aufwand S.
+
